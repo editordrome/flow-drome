@@ -22,7 +22,10 @@ import {
   Package,
   HeadphonesIcon,
   BookOpen,
-  GraduationCap
+  GraduationCap,
+  Shield,
+  Building2,
+  Settings
 } from "lucide-react";
 
 export interface MenuItem {
@@ -38,6 +41,23 @@ export interface MenuItem {
 }
 
 export const menuItems: MenuItem[] = [
+  {
+    id: "super-admin",
+    label: "Super Admin",
+    icon: Shield,
+    submenu: [
+      {
+        id: "gestao-unidades",
+        label: "Gestão de Unidades",
+        icon: Building2,
+      },
+      {
+        id: "configuracao-modulos",
+        label: "Configuração de Módulos",
+        icon: Settings,
+      }
+    ]
+  },
   {
     id: "dashboard",
     label: "Visão Geral",

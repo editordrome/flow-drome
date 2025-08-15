@@ -27,12 +27,18 @@ import MateriaisModule from "@/components/MateriaisModule";
 import TicketsModule from "@/components/TicketsModule";
 import BaseConhecimentoModule from "@/components/BaseConhecimentoModule";
 import MariaUniModule from "@/components/MariaUniModule";
+import GestaoUnidadesModule from "@/components/GestaoUnidadesModule";
+import ConfiguracaoModulosModule from "@/components/ConfiguracaoModulosModule";
 
 const Index = () => {
   const [activeModule, setActiveModule] = useState("gestao");
 
   const getModuleTitle = () => {
     switch (activeModule) {
+      case "gestao-unidades":
+        return "Gestão de Unidades";
+      case "configuracao-modulos":
+        return "Configuração de Módulos";
       case "gestao":
         return "Dashboard de Gestão";
       case "agendamentos":
@@ -86,6 +92,10 @@ const Index = () => {
 
   const renderModule = () => {
     switch (activeModule) {
+      case "gestao-unidades":
+        return <GestaoUnidadesModule />;
+      case "configuracao-modulos":
+        return <ConfiguracaoModulosModule />;
       case "gestao":
         return <ModernDashboard />;
       case "agendamentos":

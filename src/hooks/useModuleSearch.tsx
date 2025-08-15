@@ -1,11 +1,12 @@
 
 import { useState, useMemo } from 'react';
-import { menuItems } from '@/components/sidebar/MenuItems';
+import { useAllowedModules } from './useAllowedModules';
 
 export const useModuleSearch = (activeModule: string) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { allowedModules } = useAllowedModules();
 
-  // Cria uma lista plana de todos os itens disponíveis
+  // Cria uma lista plana de todos os itens disponíveis (apenas os permitidos)
   const allAvailableItems = useMemo(() => {
     const items: Array<{
       id: string;
@@ -14,7 +15,7 @@ export const useModuleSearch = (activeModule: string) => {
       parentLabel: string | null;
     }> = [];
 
-    menuItems.forEach(mainItem => {
+    allowedModules.forEach(mainItem => {
       if (mainItem.submenu) {
         // Adiciona os itens do submenu
         mainItem.submenu.forEach(sub => {
@@ -37,11 +38,11 @@ export const useModuleSearch = (activeModule: string) => {
     });
 
     return items;
-  }, []);
+  }, [allowedModules]);
 
   const currentModuleItems = useMemo(() => {
     // Encontra o item do menu principal que corresponde ao módulo ativo
-    const mainItem = menuItems.find(item => 
+    const mainItem = allowedModules.find(item => 
       item.id === activeModule || 
       (item.submenu && item.submenu.some(sub => sub.id === activeModule))
     );
@@ -65,7 +66,7 @@ export const useModuleSearch = (activeModule: string) => {
       icon: mainItem.icon,
       parentLabel: null
     }];
-  }, [activeModule]);
+  }, [activeModule, allowedModules]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return currentModuleItems;

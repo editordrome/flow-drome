@@ -2,9 +2,18 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, User } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Bell, User, LogOut, Settings, UserCircle } from "lucide-react";
 import { ModuleSearchDropdown } from "./ModuleSearchDropdown";
 import { useModuleSearch } from "@/hooks/useModuleSearch";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ModernHeaderProps {
   title: string;
@@ -21,8 +30,14 @@ export function ModernHeader({ title, subtitle, activeModule, setActiveModule }:
     hasResults
   } = useModuleSearch(activeModule);
 
+  const { user, logout } = useAuth();
+
   const handleSelectItem = (itemId: string) => {
     setActiveModule(itemId);
+  };
+
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -54,9 +69,47 @@ export function ModernHeader({ title, subtitle, activeModule, setActiveModule }:
             </Badge>
           </Button>
 
-          <Button variant="ghost" size="sm" className="hover:bg-cream-modern/50">
-            <User className="h-4 w-4 text-gray-600" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="hover:bg-cream-modern/50">
+                <User className="h-4 w-4 text-gray-600" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user?.nome || 'Usuário'}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email || 'user@mariaflow.com'}
+                  </p>
+                  {user?.is_super_admin && (
+                    <Badge variant="outline" className="text-xs w-fit">
+                      Super Admin
+                    </Badge>
+                  )}
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer">
+                <UserCircle className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configurações</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="cursor-pointer text-red-600 focus:text-red-600"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Badge variant="outline" className="text-xs bg-green-modern/20 text-green-modern border-green-modern/30">
             Online

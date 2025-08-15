@@ -1,422 +1,465 @@
 # MariaFlow - Arquitetura do Sistema
 
+*Documentação técnica atualizada - 15/08/2025*
+
 ## Visão Geral
 
-O MariaFlow é uma plataforma completa para gestão de franquias de serviços, incluindo diaristas, terceirização, limpeza especializada e pós-obra. O sistema é construído com uma arquitetura moderna baseada em React + TypeScript no frontend e Supabase como backend.
+O MariaFlow é um sistema de gestão para franquias que implementa uma arquitetura hierárquica baseada em unidades, com controle granular de módulos e permissões por nível de usuário.
 
-## Arquitetura Geral do Sistema
+## Arquitetura de Permissões
 
-<lov-mermaid>
-graph TB
-    subgraph "Frontend (React + TypeScript)"
-        A[App.tsx]
-        B[Sidebar Navigation]
-        C[Module Components]
-        D[UI Components]
-        E[Hooks & Utils]
-    end
+### Hierarquia de Usuários
+
+```
+Super Admin (is_super_admin: true)
+    │
+    ├── Acesso total ao sistema
+    ├── Gestão de todas as unidades
+    └── Configuração global de módulos
     
-    subgraph "Backend (Supabase)"
-        F[Authentication]
-        G[Database (PostgreSQL)]
-        H[Row Level Security]
-        I[Edge Functions]
-        J[Storage]
-    end
+Admin (role: "admin")
+    │
+    ├── Administração de unidade específica
+    ├── Gestão de usuários da unidade
+    └── Acesso aos módulos da unidade
     
-    subgraph "External Integrations"
-        K[WhatsApp API]
-        L[Payment Gateways]
-        M[Analytics Services]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    C --> E
-    C --> F
-    F --> G
-    G --> H
-    C --> I
-    C --> J
-    C --> K
-    C --> L
-    C --> M
-</lov-mermaid>
+Atendente (role: "atendente") - PADRÃO
+    │
+    ├── Acesso básico aos módulos
+    └── Funcionalidades operacionais
+```
+
+## Database Schema Completo
+
+### Tabelas Principais
+
+```sql
+-- Roles do sistema
+CREATE TABLE roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR UNIQUE NOT NULL,
+    display_name VARCHAR NOT NULL,
+    level INTEGER NOT NULL, -- 30: Atendente, 80: Admin, 100: Super Admin
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Usuários principais (substitui auth.users para controle local)
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR UNIQUE NOT NULL,
+    name VARCHAR NOT NULL,
+    password VARCHAR, -- Hash bcrypt
+    role_id UUID REFERENCES roles(id),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Super admins (controle especial)
+CREATE TABLE super_admins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Unidades/Filiais
+CREATE TABLE units (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR NOT NULL,
+    code VARCHAR UNIQUE,
+    address TEXT,
+    phone VARCHAR,
+    email VARCHAR,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    created_by UUID REFERENCES users(id)
+);
+
+-- Módulos do sistema
+CREATE TABLE modules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR UNIQUE NOT NULL, -- "dashboard", "pipeline", "clientes", etc.
+    display_name VARCHAR NOT NULL, -- "Dashboard", "Pipeline", "Clientes", etc.
+    description TEXT,
+    icon VARCHAR, -- Nome do ícone
+    category VARCHAR, -- "core", "comercial", "financeiro", etc.
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Módulos permitidos por unidade
+CREATE TABLE unit_modules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    unit_id UUID REFERENCES units(id) ON DELETE CASCADE,
+    module_id UUID REFERENCES modules(id) ON DELETE CASCADE,
+    is_active BOOLEAN DEFAULT true,
+    configured_at TIMESTAMPTZ DEFAULT now(),
+    configured_by UUID REFERENCES users(id),
+    UNIQUE(unit_id, module_id)
+);
+
+-- Vinculação usuário-unidade (corrigida)
+CREATE TABLE user_unit_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Corrigido para referenciar users
+    unit_id UUID REFERENCES units(id) ON DELETE CASCADE,
+    assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    role_override VARCHAR, -- Role específica para esta unidade (opcional)
+    is_primary BOOLEAN DEFAULT false,
+    assigned_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, unit_id)
+);
+
+-- Logs de atividade
+CREATE TABLE activity_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    unit_id UUID REFERENCES units(id) ON DELETE SET NULL,
+    action VARCHAR NOT NULL, -- "login", "create_user", "enable_module", etc.
+    resource VARCHAR, -- "user", "unit", "module", etc.
+    resource_id UUID, -- ID do recurso afetado
+    details JSONB, -- Detalhes adicionais da ação
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+```
 
 ## Estrutura de Módulos
 
-<lov-mermaid>
-graph LR
-    subgraph "Core Modules"
-        A[Dashboard]
-        B[Comercial]
-        C[Clientes]
-        D[Profissionais]
-        E[Financeiro]
-    end
-    
-    subgraph "Support Modules"
-        F[Marketing]
-        G[Compras]
-        H[Suporte]
-        I[Maria Uni]
-    end
-    
-    subgraph "Submódulos"
-        J[Pipeline/Leads]
-        K[Cashback]
-        L[Agenda]
-        M[Recrutadora]
-        N[Relatórios]
-        O[Materiais]
-        P[Uniformes]
-        Q[Tickets]
-    end
-    
-    B --> J
-    B --> K
-    D --> L
-    D --> M
-    E --> N
-    G --> O
-    G --> P
-    H --> Q
-</lov-mermaid>
+### Mapeamento de Módulos
 
-## Arquitetura do Frontend
+```typescript
+// Mapeamento entre IDs do menu frontend e nomes no banco
+const MODULE_MAPPING = {
+  'dashboard': 'dashboard',
+  'gestao-unidades': 'gestao_unidades', // Apenas Super Admin
+  'pipeline': 'pipeline',
+  'clientes': 'clientes',
+  'agenda': 'agenda',
+  'profissionais': 'profissionais',
+  'financeiro': 'financeiro',
+  'tickets': 'tickets',
+  'materiais-marketing': 'materiais_marketing',
+  'cashback': 'cashback',
+  'recrutadora': 'recrutadora',
+  'uniformes': 'uniformes',
+  'base-conhecimento': 'base_conhecimento',
+  'maria-uni': 'maria_uni',
+  'publicacoes': 'publicacoes'
+};
+```
 
-<lov-mermaid>
+### Categorias de Módulos
+
+```
+Core:
+├── Dashboard - Visão geral e métricas
+├── Gestão de Unidades - Super Admin only
+└── Usuários - Gestão básica
+
+Atendimento:
+├── Agenda - Sistema de agendamentos
+├── Clientes - Cadastro e gestão de clientes  
+├── Pipeline - Gestão de leads e oportunidades
+└── Tickets - Sistema de suporte
+
+Comercial:
+├── Pipeline - Leads e vendas
+└── Cashback - Sistema de recompensas
+
+Recursos Humanos:
+├── Profissionais - Gestão de equipe
+└── Recrutadora - Processo seletivo
+
+Financeiro:
+├── Financeiro - Controle financeiro
+└── Cashback - Programa de recompensas
+
+Marketing:
+├── Materiais - Gestão de materiais
+├── Marketing - Materiais promocionais
+├── Publicações - Gestão de conteúdo
+└── Uniformes - Controle de uniformes
+
+Educação:
+├── Base de Conhecimento - Documentação
+└── Maria Uni - Sistema educacional
+```
+
+## Hooks Principais
+
+### useAuth.tsx
+
+```typescript
+interface User {
+  id: string;
+  email: string;
+  nome: string | null;
+  role: string;
+  is_super_admin?: boolean;
+  unit_id?: string;
+  unit_name?: string;
+  allowed_modules?: string[]; // Módulos permitidos para a unidade
+}
+
+// Funcionalidades implementadas:
+// - Login com validação de credenciais
+// - Carregamento automático de unidade e módulos
+// - Detecção de super_admin
+// - Armazenamento em localStorage
+// - Logs detalhados para debugging
+```
+
+### useAllowedModules.tsx
+
+```typescript
+// Filtro dinâmico de módulos baseado nas permissões:
+// - Super Admin: Todos os módulos (bypass)
+// - Outros roles: Apenas módulos da unidade
+// - Mapeamento de IDs do menu para nomes no banco
+// - Retorna menuItems filtrados
+
+interface AllowedModulesReturn {
+  allowedMenuItems: MenuItem[];
+  isLoading: boolean;
+}
+```
+
+## Fluxo de Autenticação
+
+```mermaid
 graph TD
-    subgraph "Pages"
-        A[Index.tsx]
-        B[NotFound.tsx]
-    end
-    
-    subgraph "Layout Components"
-        C[ModernDashboard]
-        D[ModernHeader]
-        E[AppSidebar]
-        F[Sidebar]
-    end
-    
-    subgraph "Feature Modules"
-        G[AgendaModule]
-        H[ClientsModule]
-        I[FinancialModule]
-        J[ProfessionalsModule]
-        K[PipelineKanban]
-        L[MaterialsModule]
-    end
-    
-    subgraph "UI Components"
-        M[Button]
-        N[Card]
-        O[Table]
-        P[Modal]
-        Q[Calendar]
-        R[Charts]
-    end
-    
-    subgraph "Hooks & Utils"
-        S[useMaterialPersonalization]
-        T[useModuleSearch]
-        U[use-mobile]
-        V[utils]
-    end
-    
-    A --> C
-    C --> D
-    C --> E
-    C --> G
-    C --> H
-    C --> I
-    C --> J
-    C --> K
-    C --> L
-    G --> M
-    H --> M
-    I --> M
-    G --> S
-    G --> T
-    C --> U
-    G --> V
-</lov-mermaid>
-
-## Estrutura do Banco de Dados
-
-<lov-mermaid>
-erDiagram
-    companies ||--o{ units : "has"
-    companies ||--o{ company_members : "contains"
-    companies ||--o{ franchise_subscriptions : "subscribes_to"
-    
-    users ||--o{ company_members : "member_of"
-    users ||--o{ user_roles : "has_role"
-    users ||--o{ profiles : "has_profile"
-    users ||--o{ notifications : "receives"
-    
-    units ||--o{ profissionais : "employs"
-    units ||--o{ status_atendimento : "manages"
-    units ||--o{ recruitment_module : "recruits"
-    
-    modules ||--o{ module_instances : "instantiated_as"
-    
-    franchise_plans ||--o{ franchise_subscriptions : "defines"
-    
-    companies {
-        uuid id PK
-        text name
-        text key
-        text status
-        jsonb modules
-        jsonb settings
-    }
-    
-    units {
-        uuid id PK
-        uuid company_id FK
-        text name
-        text code
-        text status
-        jsonb modules
-    }
-    
-    users {
-        uuid id PK
-        uuid auth_user_id
-        text email
-        text role
-        boolean active
-    }
-    
-    profissionais {
-        uuid id PK
-        uuid unit_id FK
-        text NOME
-        text WHATSAPP
-    }
-    
-    status_atendimento {
-        uuid id PK
-        uuid unit_id FK
-        text CLIENTE
-        text PROFISSIONAL
-        text STATUS
-        text DATA
-    }
-</lov-mermaid>
-
-## Fluxo de Dados e Autenticação
-
-<lov-mermaid>
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant S as Supabase Auth
-    participant D as Database
-    participant R as RLS Policies
-    
-    U->>F: Login Request
-    F->>S: Authenticate
-    S->>F: JWT Token
-    F->>D: Request Data with Token
-    D->>R: Check Permissions
-    R->>D: Allow/Deny Access
-    D->>F: Return Filtered Data
-    F->>U: Display Data
-</lov-mermaid>
-
-## Sistema de Permissões e RLS
-
-<lov-mermaid>
-graph TD
-    subgraph "User Roles"
-        A[Super Admin]
-        B[Company Admin]
-        C[Unit Manager]
-        D[Staff Member]
-    end
-    
-    subgraph "RLS Policies"
-        E[Company Level Access]
-        F[Unit Level Access]
-        G[User Specific Data]
-        H[Public Data]
-    end
-    
-    subgraph "Data Access"
-        I[All Companies]
-        J[Own Company]
-        K[Own Unit]
-        L[Own Records]
-    end
-    
-    A --> E
-    A --> I
-    B --> E
-    B --> J
-    C --> F
-    C --> K
-    D --> G
-    D --> L
-    
-    E --> J
-    F --> K
-    G --> L
-    H --> L
-</lov-mermaid>
+    A[Login Form] --> B[useAuth.login()]
+    B --> C{Validar Credenciais}
+    C -->|Inválido| D[Erro de Login]
+    C -->|Válido| E[Buscar Dados do Usuário]
+    E --> F{É Super Admin?}
+    F -->|Sim| G[Carregar Todos Módulos]
+    F -->|Não| H[Buscar Unidade do Usuário]
+    H --> I[Buscar Módulos da Unidade]
+    I --> J{Tem Módulos?}
+    J -->|Não| K[allowed_modules: vazio]
+    J -->|Sim| L[Carregar Lista de Módulos]
+    G --> M[Montar Objeto User]
+    K --> M
+    L --> M
+    M --> N[Salvar localStorage]
+    N --> O[Redirecionar Dashboard]
+```
 
 ## Componentes Principais
 
-### 1. Dashboard e Navegação
-- **ModernDashboard**: Container principal da aplicação
-- **AppSidebar**: Navegação lateral com estrutura hierárquica de módulos
-- **ModernHeader**: Cabeçalho com busca global e notificações
+### AppSidebarMenu.tsx
+- Renderização dinâmica baseada em useAllowedModules
+- Estado de loading durante carregamento
+- Fallback "Nenhum módulo disponível" quando vazio
+- Suporte completo a ícones e categorias
 
-### 2. Módulos Funcionais
+### GestaoUnidadesModule.tsx
+- Interface completa para Super Admin
+- 4 Abas: Dados, Módulos, Usuários, Logs
+- CRUD completo de unidades
+- Criação de usuários como "Atendente" por padrão
+- Configuração de módulos por unidade
+- Sistema de vinculação usuário-unidade
 
-#### Agenda e Profissionais
-- **AgendaModule**: Gestão de agendamentos e calendário
-- **ProfessionalsModule**: Cadastro e gestão de profissionais
-- **CalendarioTab**: Visualização em calendário com disponibilidade
-- **GestaoTab**: Gestão semanal e estatísticas
+## Estado Atual - 15/08/2025
 
-#### Comercial e Clientes
-- **PipelineKanban**: Sistema Kanban para gestão de leads
-- **ClientsModule**: Cadastro e gestão de clientes
-- **CashbackModule**: Sistema de cashback e recompensas
+### ✅ Funcionalidades Implementadas
+- [x] Sistema de roles hierárquico (Super Admin > Admin > Atendente)
+- [x] Database schema completo com foreign keys corretas
+- [x] Interface de gestão de unidades com 4 abas
+- [x] Criação automática de usuários como "Atendente"
+- [x] Vinculação de usuários às unidades (foreign key corrigida)
+- [x] Hook useAuth com carregamento de permissões
+- [x] Hook useAllowedModules para filtro de menu
+- [x] Sistema de logs de atividade implementado
+- [x] Debugging extensivo com console.log em todos os pontos críticos
 
-#### Financeiro
-- **FinancialModule**: Dashboard financeiro completo
-- **ContasPagarModule**: Contas a pagar
-- **ContasReceberModule**: Contas a receber
-- **FluxoCaixaModule**: Controle de fluxo de caixa
+### 🔧 Em Desenvolvimento - Problemas Ativos
 
-#### Marketing e Materiais
-- **MateriaisMarketingModule**: Criação de materiais promocionais
-- **MaterialPersonalizationModal**: Personalização de templates
-- **PublicacoesModule**: Gestão de publicações
+#### Problema Principal: Filtro de Módulos Não Funciona
+**Sintomas**: Usuário com apenas módulo "Pipeline" liberado vê todos os módulos no menu
 
-### 3. Componentes de UI
-- Sistema de design baseado em shadcn/ui
-- Componentes customizados para needs específicos
-- Tokens de design semânticos para consistência visual
+**Debugging Realizado**:
+1. ✅ Database queries testadas diretamente - funcionando
+2. ✅ Foreign keys corrigidas - user_unit_assignments referencia users
+3. ✅ Role "atendente" criada com level 30
+4. ✅ Console.log extensivo adicionado em useAuth e useAllowedModules
+5. ✅ Query simplificada com JOIN direto
 
-## Integrações e APIs
+**Estado Atual da Investigação**:
+- useAuth carrega unit_id e unit_name corretamente
+- allowed_modules está chegando como undefined no useAllowedModules
+- Query SQL funciona no Supabase, mas falha no hook
 
-<lov-mermaid>
-graph LR
-    subgraph "MariaFlow Frontend"
-        A[React App]
-    end
-    
-    subgraph "Supabase Backend"
-        B[Database]
-        C[Auth]
-        D[Storage]
-        E[Edge Functions]
-    end
-    
-    subgraph "External APIs"
-        F[WhatsApp Business]
-        G[Payment Providers]
-        H[Analytics]
-        I[Email Services]
-    end
-    
-    A --> B
-    A --> C
-    A --> D
-    A --> E
-    E --> F
-    E --> G
-    E --> H
-    E --> I
-</lov-mermaid>
+**Próximos Passos**:
+1. Verificar se a query está executando no contexto correto
+2. Testar query isolada no useAuth
+3. Validar mapeamento de módulos
 
-## Estrutura de Arquivos
+### ⚠️ Problemas Conhecidos
+1. **Module Filtering**: Core issue - módulos não estão sendo filtrados corretamente
+2. **Query Context**: Possível problema na execução das queries dentro dos hooks React
+3. **Async Loading**: Timing issues entre carregamento de user e módulos
 
+## Estrutura do Frontend
+
+### Organização de Arquivos
 ```
 src/
 ├── components/
-│   ├── ui/                    # Componentes base (shadcn/ui)
-│   ├── sidebar/               # Componentes de navegação
-│   ├── agenda/                # Módulo de agenda
-│   ├── financial/             # Módulo financeiro
-│   ├── pipeline/              # Sistema de leads
-│   ├── professionals/         # Gestão de profissionais
-│   └── [outros módulos]/
-├── hooks/                     # React hooks customizados
-├── lib/                       # Utilitários e configurações
-├── pages/                     # Páginas principais
-├── data/                      # Dados estáticos e mocks
-├── utils/                     # Funções utilitárias
-└── integrations/
-    └── supabase/              # Cliente e tipos Supabase
+│   ├── ui/ (shadcn/ui components)
+│   ├── sidebar/ (navigation components)
+│   ├── AgendaModule.tsx
+│   ├── ClientsModule.tsx
+│   ├── GestaoUnidadesModule.tsx (Super Admin)
+│   └── [outros módulos]
+├── hooks/
+│   ├── useAuth.tsx (authentication + permissions)
+│   ├── useAllowedModules.tsx (module filtering)
+│   └── [outros hooks]
+├── pages/
+│   ├── Index.tsx (dashboard)
+│   └── LoginPage.tsx
+└── integrations/supabase/
+    ├── client.ts
+    └── types.ts
 ```
 
-## Segurança e Compliance
+### Tecnologias Utilizadas
 
-### Row Level Security (RLS)
-- Políticas de acesso baseadas em níveis organizacionais
-- Separação por empresa e unidade
-- Controle granular de permissões
+**Frontend**:
+- React 18 + TypeScript
+- Vite (build tool)
+- Tailwind CSS + shadcn/ui
+- Lucide React (icons)
 
-### Auditoria
-- Log completo de ações do usuário
-- Rastreamento de mudanças de dados
-- Histórico de operações críticas
+**Backend**:
+- Supabase (BaaS)
+- PostgreSQL
+- Row Level Security (planejado)
 
-### Autenticação
-- Supabase Auth com JWT
-- Múltiplos provedores (email, social)
-- Gestão de sessões segura
+**Desenvolvimento**:
+- ESLint + TypeScript
+- Git + GitHub
 
-## Performance e Escalabilidade
+## Contas de Teste
 
-### Frontend
-- Code splitting por módulos
-- Lazy loading de componentes
-- Otimização de re-renders
+### Super Admin
+- **Email**: admin@sistema.com
+- **Senha**: 123456
+- **Acesso**: Todos os módulos + Gestão de Unidades
 
-### Backend
-- Índices otimizados no banco
-- Consultas eficientes com RLS
-- Cache estratégico
+### Admin de Unidade
+- **Email**: admin.filial1@sistema.com  
+- **Senha**: 123456
+- **Unidade**: Filial Centro
+- **Módulos**: Dashboard, Pipeline, Clientes
 
-### Monitoramento
-- Logs de aplicação
-- Métricas de performance
-- Alertas automatizados
+### Atendente
+- **Email**: atendente.teste@sistema.com
+- **Senha**: 123456
+- **Unidade**: Filial Centro  
+- **Módulos**: Apenas Pipeline (PROBLEMA: vendo todos)
 
-## Fluxo de Desenvolvimento
+## Instalação e Configuração
 
-<lov-mermaid>
-graph LR
-    A[Development] --> B[Testing]
-    B --> C[Staging]
-    C --> D[Production]
-    
-    subgraph "Deployment"
-        E[Supabase Migrations]
-        F[Frontend Deploy]
-        G[Edge Functions]
-    end
-    
-    D --> E
-    D --> F
-    D --> G
-</lov-mermaid>
+### Pré-requisitos
+- Node.js 18+
+- Conta Supabase
 
-## Próximos Passos
+### Setup Local
+```bash
+# Clone do repositório
+git clone <repository-url>
+cd mariaflow-projeto-main
 
-1. **Implementação de Testes**: Testes unitários e de integração
-2. **Otimização de Performance**: Análise e melhorias de velocidade
-3. **Expansão de Módulos**: Novos recursos baseados em feedback
-4. **Mobile App**: Aplicativo móvel para profissionais
-5. **APIs Externas**: Integrações com mais serviços terceiros
+# Instalação de dependências  
+npm install
+
+# Configuração do Supabase
+# Copie .env.example para .env
+# Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
+
+# Executar migrações
+supabase db push
+
+# Iniciar desenvolvimento
+npm run dev
+```
+
+### Variáveis de Ambiente
+```env
+VITE_SUPABASE_URL=sua_url_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anonima
+```
+
+## Roadmap de Desenvolvimento
+
+### Versão 1.0 - Básica (Atual)
+- [x] Sistema de autenticação
+- [x] Gestão de unidades (Super Admin)
+- [x] Criação de usuários
+- [ ] **Filtro de módulos (CRÍTICO - em desenvolvimento)**
+
+### Versão 1.1 - Melhorias
+- [ ] RLS policies completas
+- [ ] Sistema de auditoria avançado
+- [ ] Interface responsiva mobile
+- [ ] Testes automatizados
+
+### Versão 2.0 - Expansão
+- [ ] App mobile
+- [ ] APIs REST públicas
+- [ ] Integrações externas (WhatsApp, etc.)
+- [ ] Sistema de relatórios avançado
+
+## Debugging e Logs
+
+### Console Logs Implementados
+- useAuth: Login, carregamento de unidade e módulos
+- useAllowedModules: Recebimento e filtragem de módulos
+- AppSidebarMenu: Renderização de itens filtrados
+
+### Como Debugar
+1. Abra as ferramentas do desenvolvedor
+2. Faça login com usuário de teste
+3. Monitore console para fluxo de dados
+4. Verifique localStorage para dados salvos
+
+### Comandos Úteis
+```sql
+-- Verificar módulos de uma unidade
+SELECT m.name, m.display_name 
+FROM unit_modules um
+JOIN modules m ON um.module_id = m.id
+WHERE um.unit_id = 'uuid-da-unidade' AND um.is_active = true;
+
+-- Verificar usuário e unidade
+SELECT u.email, u.name, uua.unit_id, un.name as unit_name
+FROM users u
+JOIN user_unit_assignments uua ON u.id = uua.user_id  
+JOIN units un ON uua.unit_id = un.id
+WHERE u.email = 'email@teste.com';
+```
+
+## Considerações de Segurança
+
+### Implementadas
+- Hash de senhas (planejado com bcrypt)
+- Validação de foreign keys no banco
+- Separação de roles e permissões
+
+### Planejadas
+- Row Level Security (RLS) policies
+- Validação JWT mais robusta
+- Rate limiting
+- Auditoria completa de ações
 
 ---
 
-Este documento serve como referência principal para a arquitetura do sistema MariaFlow e deve ser atualizado conforme a evolução do projeto.
+*Esta documentação reflete o estado atual do sistema em 15/08/2025. O problema crítico de filtro de módulos está sendo ativamente investigado com debugging extensivo implementado.*

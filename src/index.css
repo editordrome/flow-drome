@@ -1,0 +1,518 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    /* Updated sidebar colors to match the dark blue theme - KEEPING UNCHANGED */
+    --sidebar-background: 221 84% 10%;  /* #010d32 - Dark blue background */
+    --sidebar-foreground: 210 40% 98%;  /* Light text for contrast */
+    --sidebar-primary: 210 40% 98%;     /* Light primary for contrast */
+    --sidebar-primary-foreground: 221 84% 10%;  /* Dark text on light backgrounds */
+    --sidebar-accent: 221 70% 15%;      /* Slightly lighter blue for hover states */
+    --sidebar-accent-foreground: 210 40% 98%;  /* Light text on accent */
+    --sidebar-border: 221 60% 20%;      /* Border color that's visible on dark background */
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* NEW UI Kit Colors from the provided palette */
+    --kit-primary: 51 100% 50%;      /* #FFD100 - Yellow Primary */
+    --kit-secondary: 196 100% 35%;   /* #0077B6 - Blue Secondary */
+    --kit-accent: 169 100% 33%;      /* #00A896 - Green Accent */
+    --kit-light: 54 100% 83%;        /* #FFF1A8 - Light Cream */
+    
+    /* Extended color palette for the new UI kit */
+    --yellow-kit: 51 100% 50%;       /* #FFD100 */
+    --blue-kit: 196 100% 35%;        /* #0077B6 */
+    --green-kit: 169 100% 33%;       /* #00A896 */
+    --cream-kit: 54 100% 83%;        /* #FFF1A8 */
+    --teal-kit: 180 100% 35%;
+    --orange-kit: 25 100% 50%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 221 84% 10%;  /* Keep same dark blue in dark mode */
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 221 70% 15%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 221 60% 20%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* NEW UI Kit Utility Classes */
+@layer utilities {
+  /* Primary Colors from UI Kit */
+  .bg-kit-primary {
+    background-color: #FFD100;
+  }
+  
+  .bg-kit-secondary {
+    background-color: #0077B6;
+  }
+  
+  .bg-kit-accent {
+    background-color: #00A896;
+  }
+  
+  .bg-kit-light {
+    background-color: #FFF1A8;
+  }
+  
+  .text-kit-primary {
+    color: #FFD100;
+  }
+  
+  .text-kit-secondary {
+    color: #0077B6;
+  }
+  
+  .text-kit-accent {
+    color: #00A896;
+  }
+  
+  .text-kit-light {
+    color: #FFF1A8;
+  }
+  
+  .border-kit-primary {
+    border-color: #FFD100;
+  }
+  
+  .border-kit-secondary {
+    border-color: #0077B6;
+  }
+  
+  .border-kit-accent {
+    border-color: #00A896;
+  }
+  
+  .border-kit-light {
+    border-color: #FFF1A8;
+  }
+
+  /* Legacy support - keeping existing classes */
+  .bg-yellow-modern {
+    background-color: #FFD100;
+  }
+  
+  .bg-blue-modern {
+    background-color: #0077B6;
+  }
+  
+  .bg-green-modern {
+    background-color: #00A896;
+  }
+  
+  .bg-cream-modern {
+    background-color: #FFF1A8;
+  }
+  
+  .bg-teal-modern {
+    background-color: #2A9D8F;
+  }
+  
+  .bg-orange-modern {
+    background-color: #FDC500;
+  }
+  
+  .text-yellow-modern {
+    color: #B8860B;
+  }
+  
+  .text-blue-modern {
+    color: #0077B6;
+  }
+  
+  .text-green-modern {
+    color: #00A896;
+  }
+  
+  .text-cream-modern {
+    color: #F4E04D;
+  }
+  
+  .text-teal-modern {
+    color: #1F7A6B;
+  }
+  
+  .text-orange-modern {
+    color: #D4A500;
+  }
+
+  .border-yellow-modern {
+    border-color: #FFD100;
+  }
+  
+  .border-blue-modern {
+    border-color: #0077B6;
+  }
+  
+  .border-green-modern {
+    border-color: #00A896;
+  }
+  
+  .border-cream-modern {
+    border-color: #FFF1A8;
+  }
+}
+
+/* NEW UI Kit Component Styles */
+@layer components {
+  /* Card styles matching the UI kit */
+  .kit-card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden;
+  }
+  
+  .kit-card-header {
+    @apply p-6 bg-gradient-to-r from-kit-light to-white border-b border-gray-50;
+  }
+  
+  .kit-card-content {
+    @apply p-6;
+  }
+  
+  /* Button styles matching the UI kit */
+  .kit-btn-primary {
+    @apply bg-kit-primary hover:bg-yellow-500 text-gray-900 font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+  
+  .kit-btn-secondary {
+    @apply bg-kit-secondary hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+  
+  .kit-btn-accent {
+    @apply bg-kit-accent hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md;
+  }
+  
+  .kit-btn-outline-primary {
+    @apply border-2 border-kit-primary text-kit-primary hover:bg-kit-primary hover:text-gray-900 font-semibold py-3 px-6 rounded-xl transition-all duration-200;
+  }
+  
+  .kit-btn-outline-secondary {
+    @apply border-2 border-kit-secondary text-kit-secondary hover:bg-kit-secondary hover:text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200;
+  }
+  
+  /* Form styles matching the UI kit */
+  .kit-input {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-kit-secondary focus:ring-2 focus:ring-kit-secondary/20 transition-all duration-200;
+  }
+  
+  .kit-select {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-kit-secondary bg-white text-kit-secondary focus:outline-none focus:ring-2 focus:ring-kit-secondary/20;
+  }
+  
+  /* Badge styles matching the UI kit */
+  .kit-badge-primary {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .kit-badge-secondary {
+    @apply bg-kit-secondary text-white px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .kit-badge-accent {
+    @apply bg-kit-accent text-white px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .kit-badge-light {
+    @apply bg-kit-light text-kit-secondary px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  /* Status badges from the images */
+  .kit-status-confirmado {
+    @apply bg-kit-accent text-white px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-status-pendente {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-status-em-andamento {
+    @apply bg-kit-secondary text-white px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-status-cancelado {
+    @apply bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-status-disponivel {
+    @apply bg-kit-accent text-white px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-status-baixo-estoque {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-status-indisponivel {
+    @apply bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+
+  /* Service category badges */
+  .kit-category-residencial {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-category-comercial {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-category-pos-obra {
+    @apply bg-kit-secondary text-white px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  .kit-category-vidros {
+    @apply bg-kit-secondary text-white px-3 py-1 rounded-lg text-xs font-medium;
+  }
+
+  .kit-category-carpetes {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+
+  .kit-category-estofados {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+
+  .kit-category-tapetes {
+    @apply bg-kit-primary text-gray-900 px-3 py-1 rounded-lg text-xs font-medium;
+  }
+  
+  /* Table styles matching the UI kit */
+  .kit-table {
+    @apply w-full rounded-2xl overflow-hidden shadow-kit border border-gray-100;
+  }
+  
+  .kit-table-header {
+    @apply bg-kit-secondary text-white;
+  }
+  
+  .kit-table-header th {
+    @apply px-6 py-4 text-left font-semibold text-sm;
+  }
+  
+  .kit-table-row {
+    @apply border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150;
+  }
+  
+  .kit-table-cell {
+    @apply px-6 py-4 text-sm text-gray-900;
+  }
+  
+  /* Kanban styles matching the UI kit */
+  .kit-kanban-column {
+    @apply bg-gray-50 rounded-2xl p-4 min-h-96;
+  }
+  
+  .kit-kanban-header {
+    @apply flex items-center justify-between mb-4 pb-2 border-b border-gray-200;
+  }
+  
+  .kit-kanban-title {
+    @apply font-semibold text-gray-900 text-lg;
+  }
+  
+  .kit-kanban-count {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white;
+  }
+  
+  .kit-kanban-count-pendente {
+    @apply kit-kanban-count bg-kit-primary text-gray-900;
+  }
+  
+  .kit-kanban-count-andamento {
+    @apply kit-kanban-count bg-kit-secondary;
+  }
+  
+  .kit-kanban-count-concluido {
+    @apply kit-kanban-count bg-kit-accent;
+  }
+  
+  .kit-kanban-card {
+    @apply bg-white rounded-xl p-4 mb-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200;
+  }
+  
+  /* Profile card styles matching the UI kit */
+  .kit-profile-card {
+    @apply bg-white rounded-2xl shadow-kit border border-gray-100 overflow-hidden;
+  }
+  
+  .kit-profile-header {
+    @apply h-24 bg-gradient-to-r relative;
+  }
+  
+  .kit-profile-header-blue {
+    @apply kit-profile-header from-kit-secondary to-blue-600;
+  }
+  
+  .kit-profile-header-green {
+    @apply kit-profile-header from-kit-accent to-green-600;
+  }
+  
+  .kit-profile-avatar {
+    @apply w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl absolute -bottom-8 left-1/2 transform -translate-x-1/2 border-4 border-white shadow-md;
+  }
+  
+  .kit-profile-avatar-green {
+    @apply kit-profile-avatar bg-kit-accent;
+  }
+  
+  .kit-profile-avatar-yellow {
+    @apply kit-profile-avatar bg-kit-primary text-gray-900;
+  }
+  
+  .kit-profile-content {
+    @apply pt-12 pb-6 px-6 text-center;
+  }
+  
+  .kit-profile-stats {
+    @apply flex justify-center space-x-8 mb-6;
+  }
+  
+  .kit-profile-stat {
+    @apply text-center;
+  }
+  
+  .kit-profile-stat-number {
+    @apply text-2xl font-bold text-kit-secondary;
+  }
+  
+  .kit-profile-stat-label {
+    @apply text-sm text-gray-600;
+  }
+  
+  /* Horizontal profile card styles */
+  .kit-profile-horizontal {
+    @apply bg-white rounded-2xl shadow-kit border border-gray-100 p-6 flex items-center space-x-6;
+  }
+  
+  .kit-profile-horizontal-avatar {
+    @apply w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl bg-kit-accent;
+  }
+  
+  .kit-profile-horizontal-content {
+    @apply flex-1;
+  }
+  
+  .kit-profile-horizontal-stats {
+    @apply flex space-x-8 mt-4;
+  }
+  
+  /* Alert styles matching the UI kit */
+  .kit-alert-success {
+    @apply bg-green-50 border-l-4 border-kit-accent p-4 rounded-r-lg;
+  }
+  
+  .kit-alert-warning {
+    @apply bg-yellow-50 border-l-4 border-kit-primary p-4 rounded-r-lg;
+  }
+  
+  .kit-alert-info {
+    @apply bg-blue-50 border-l-4 border-kit-secondary p-4 rounded-r-lg;
+  }
+  
+  /* Icon containers matching the UI kit */
+  .kit-icon-container {
+    @apply w-12 h-12 rounded-full flex items-center justify-center;
+  }
+  
+  .kit-icon-primary {
+    @apply kit-icon-container bg-kit-primary text-gray-900;
+  }
+  
+  .kit-icon-secondary {
+    @apply kit-icon-container bg-kit-secondary text-white;
+  }
+  
+  .kit-icon-accent {
+    @apply kit-icon-container bg-kit-accent text-white;
+  }
+  
+  .kit-icon-light {
+    @apply kit-icon-container bg-kit-light text-kit-secondary;
+  }
+
+  /* Action buttons from images */
+  .kit-action-button {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors duration-150;
+  }
+
+  .kit-action-button-primary {
+    @apply kit-action-button hover:bg-kit-primary/10 text-kit-secondary;
+  }
+
+  /* Progress indicators */
+  .kit-progress-indicator {
+    @apply text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded;
+  }
+}

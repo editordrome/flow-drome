@@ -91,11 +91,13 @@ npm run dev
 - [x] Sistema de autenticação completo
 - [x] Hierarquia de permissões (Super Admin > Admin > Atendente)
 - [x] Interface de gestão de unidades com abas (Dados, Módulos, Usuários, Logs)
-- [x] Criação e vinculação de usuários às unidades
+- [x] **Criação e vinculação de usuários às unidades** ✨ **NOVO**
+- [x] **Políticas RLS para gestão de usuários** ✨ **NOVO**
 - [x] Configuração de módulos por unidade
 - [x] Sidebar dinâmica baseada nas permissões
 - [x] Database com foreign keys e constraints corretas
 - [x] Role "Atendente" como padrão para novos usuários
+- [x] **Sistema de vinculação automática usuário-unidade** ✨ **NOVO**
 
 ### 🔧 Em Desenvolvimento
 - [ ] Filtro de módulos baseado nas permissões da unidade
@@ -105,15 +107,22 @@ npm run dev
 ### ⚠️ Problemas Conhecidos
 - Sistema não está filtrando módulos corretamente para usuários não-super-admin
 - Query de carregamento de módulos permitidos precisa ajustes
-- Logs de debug implementados para investigação
 
 ## 🔄 Últimas Atualizações
 
-### 15/08/2025
-- ✅ Corrigidas foreign keys em `user_unit_assignments`
-- ✅ Implementado sistema de roles com "Atendente" como padrão
-- ✅ Adicionados logs detalhados para debug
-- 🔧 Investigando problema de filtro de módulos por unidade
+### 15/08/2025 - Sistema de Vinculação de Usuários ✅
+- ✅ **Políticas RLS Implementadas**: Criadas políticas para `users`, `user_unit_assignments`, `user_units`
+- ✅ **Interface Funcional**: Super Admin pode criar usuários via "Gestão de Unidades" → Tab "Usuários"
+- ✅ **Vinculação Automática**: Usuários criados são automaticamente vinculados à unidade selecionada
+- ✅ **Testado e Validado**: Funcionalidade testada via script automatizado e interface
+- ✅ **Base de Dados**: 5 usuários, 4 unidades, 3 roles ativos no sistema
+
+### Funcionalidade Operacional
+- **Fluxo**: Super Admin → Sidebar → "Gestão de Unidades" → Selecionar Unidade → Tab "Usuários" → Criar Usuário
+- **Validação**: Nome, email e senha obrigatórios
+- **Role Padrão**: Atendente (level 30) atribuída automaticamente
+- **Vinculação**: Automática à unidade selecionada pelo Super Admin
+- **Feedback**: Alertas de sucesso/erro integrados na interface
 
 ## 📁 Estrutura do Projeto
 

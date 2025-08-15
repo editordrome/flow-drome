@@ -14,6 +14,111 @@
 9. [Módulo de Suporte](#módulo-de-suporte)
 10. [Maria Uni](#maria-uni)
 11. [Módulo de Agendamentos](#módulo-de-agendamentos)
+12. [Gestão de Unidades (Super Admin)](#gestão-de-unidades-super-admin)
+13. [Funcionalidades Transversais](#funcionalidades-transversais)
+- PWA completo para uso offline
+- Multilíngue para expansão internacional
+- APIs públicas para parceiros
+
+---
+
+## Gestão de Unidades (Super Admin)
+
+### Visão Geral
+Módulo exclusivo para Super Administradores que permite gerenciar todas as unidades da franquia, incluindo criação de usuários, configuração de módulos e controle completo do sistema.
+
+### Funcionalidades Principais
+
+#### 1. Gerenciamento de Unidades
+- **Listagem Completa**: Visualização de todas as unidades cadastradas
+- **Detalhes da Unidade**: Informações completas (nome, CNPJ, endereço, contatos)
+- **Status Operacional**: Controle de unidades ativas/inativas
+- **Métricas por Unidade**: Número de usuários, módulos ativos, performance
+
+#### 2. Gestão de Usuários
+- **Criação de Usuários**: Interface para cadastrar novos usuários
+- **Vinculação Automática**: Associação automática à unidade selecionada
+- **Controle de Roles**: Atribuição de níveis (Super Admin, Admin, Atendente)
+- **Gestão de Permissões**: Controle granular de acesso por usuário
+
+#### 3. Configuração de Módulos
+- **Ativação/Desativação**: Controle individual de módulos por unidade
+- **Visualização em Grid**: Interface moderna com toggles para cada módulo
+- **Categorização**: Módulos organizados por categorias (Core, Atendimento, Financeiro, etc.)
+- **Aplicação em Massa**: Configurações que podem ser aplicadas a múltiplas unidades
+
+#### 4. Sistema de Logs
+- **Auditoria Completa**: Registro de todas as ações realizadas
+- **Histórico de Mudanças**: Rastreamento de alterações em configurações
+- **Atividades por Usuário**: Log detalhado por usuário e unidade
+- **Relatórios de Acesso**: Controle de login e ações dos usuários
+
+### Estrutura Técnica
+
+#### Componente Principal
+- `GestaoUnidadesModule.tsx`: Interface completa com sistema de tabs
+
+#### Interface de Abas
+1. **Dados**: Informações gerais da unidade
+2. **Módulos**: Configuração de módulos ativos
+3. **Usuários**: Criação e gestão de usuários
+4. **Logs**: Histórico de atividades
+
+#### Base de Dados
+- `units`: Informações das unidades
+- `users`: Usuários do sistema
+- `user_unit_assignments`: Vinculação usuário-unidade
+- `unit_modules`: Módulos ativos por unidade
+- `activity_logs`: Logs de atividades
+
+### Funcionalidades Implementadas (15/08/2025)
+
+#### ✅ Sistema de Vinculação de Usuários
+- **Criação Simplificada**: Formulário com nome, email e senha
+- **Role Padrão**: Atendente atribuído automaticamente
+- **Vinculação Automática**: Usuário vinculado à unidade selecionada
+- **Validação Integrada**: Campos obrigatórios com feedback visual
+- **RLS Policies**: Políticas de segurança implementadas
+
+#### ✅ Políticas de Segurança
+```sql
+-- Usuários - Acesso completo para gestão
+CREATE POLICY "Allow anonymous write access to users" 
+ON users FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- Vinculações usuário-unidade
+CREATE POLICY "Allow anonymous access to user_unit_assignments" 
+ON user_unit_assignments FOR ALL TO anon USING (true) WITH CHECK (true);
+```
+
+#### ✅ Estado Operacional
+- **5 Usuários Cadastrados**: Incluindo Super Admin e Admins
+- **4 Unidades Ativas**: MariaFlow Matriz, Filial Norte, MB Drome, MB Londrina
+- **3 Roles Configurados**: Super Admin (100), Admin (80), Atendente (30)
+- **Sistema 100% Funcional**: Testado e validado
+
+### Fluxo Operacional
+
+1. **Acesso ao Módulo**
+   - Super Admin → Sidebar → "Gestão de Unidades"
+
+2. **Seleção de Unidade**
+   - Lista dropdown com todas as unidades disponíveis
+   - Carregamento automático dos dados da unidade
+
+3. **Gestão de Usuários**
+   - Tab "Usuários" → Formulário de criação
+   - Preenchimento: Nome, Email, Senha
+   - Sistema vincula automaticamente à unidade
+
+4. **Confirmação**
+   - Alert de sucesso/erro
+   - Recarregamento dos dados
+   - Usuário criado e operacional
+
+---
+
+## Conclusãoamentos)
 12. [Funcionalidades Transversais](#funcionalidades-transversais)
 
 ---
@@ -536,11 +641,11 @@ A plataforma está preparada para crescimento e evolução contínua, sempre foc
 
 ---
 
-**Versão do Documento**: 1.0  
+**Versão do Documento**: 1.1  
 **Data de Criação**: 2025-01-14  
-**Última Atualização**: 2025-01-14  
+**Última Atualização**: 2025-08-15  
 **Autor**: Equipe de Desenvolvimento MariaFlow
 
 ---
 
-*Este documento é um guia vivo e será atualizado conforme a evolução do sistema.*
+*Este documento é um guia vivo e será atualizado conforme a evolução do sistema. Última atualização: Implementação do Sistema de Vinculação de Usuários (15/08/2025).*

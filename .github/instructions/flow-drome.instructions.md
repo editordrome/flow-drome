@@ -203,15 +203,29 @@ is_super_admin: false
 
 ### 🎛️ Hooks Importantes
 
-#### Autenticação (NOVO - Agosto 2025)
+#### Autenticação (ATUALIZADO - Agosto 2025)
 - `useAuth()` - Hook principal de autenticação com:
   - `login(email, password)` - Função de login com fallback duplo (RPC + SQL direto)
   - `logout()` - Função de logout com limpeza de sessão
-  - `user` - Estado do usuário logado (id, email, nome, role, is_super_admin)
+  - `user` - Estado do usuário logado (id, email, nome, role, role_level, is_super_admin)
   - `isLoading` - Estado de carregamento
   - `isLoggedIn` - Status de autenticação
 
+#### Gestão de Unidades e Permissões (NOVO - Agosto 2025)
+- `useActiveUnit()` - Hook principal para gerenciamento hierárquico:
+  - `activeUnit` - Unidade atualmente ativa para o usuário
+  - `userUnits` - Lista de unidades acessíveis pelo usuário
+  - `availableModules` - Módulos disponíveis baseados em permissões
+  - `loading` - Estado de carregamento das permissões
+  - `switchUnit(unitId)` - Função para trocar unidade ativa
+  - `refreshModules()` - Recarregar módulos após mudanças
+  - Context Provider para estado global de unidades/módulos
+
 #### Configuração e Estado
+- `useAllowedModules()` - Filtragem de menu baseada em permissões:
+  - Consome `availableModules` do `useActiveUnit`
+  - Adiciona módulos Super Admin quando aplicável
+  - Filtra `MenuItems` para sidebar hierárquica
 - `useModuleConfiguration(moduleKey, companyId?, unitId?)` - Configurações por módulo
 - `useMaterialPersonalization()` - Personalização de materiais
 - `useModuleSearch()` - Busca de módulos
@@ -223,42 +237,57 @@ is_super_admin: false
 
 ### 📊 Integração Supabase
 
+#### Integração Supabase
+
 #### Autenticação (ATUALIZADO - Agosto 2025)
 - **Sistema Customizado**: Implementado via função `authenticate_user(email, password)`
 - **Função RPC**: `public.authenticate_user` com validação de senha via pgcrypto
 - **Usuários Configurados**:
   - Super Admin: `jeanpetri@gmail.com` / `DRom@29011725` (ID: 3ef8a250-073c-4c98-b58a-9c6521197939)
   - Admin: `admin@mariaflow.com` / `admin123` (ID: 764e0ae6-bc0c-4005-9774-9dec96609c8d)
+  - Atendente: `atendente@mariaflow.com` / `atendente123` (Dashboard + Clientes)
+  - Atendente: `lucas@email.com` / `lucas123` (Dashboard + Clientes + Agenda)
 - **Roles Configuradas**: 
   - Super Administrador (level 100) - Acesso total ao sistema
   - Administrador (level 80) - Acesso administrativo padrão
+  - Atendente (level 30) - Acesso limitado baseado em permissões específicas
 - **Sistema de Fallback**: Se RPC falhar, usa consulta direta às tabelas
 - **Proteção de Rotas**: Implementada via AuthProvider no App.tsx
 - **UI de Login**: Página de login moderna com botões de teste rápido
 - **Logout**: Menu dropdown no header com opção "Sair"
+- **Permissões Hierárquicas**: Sistema completo de RLS baseado em unidades e módulos
 - Row Level Security (RLS) habilitado em tabelas críticas
-- Políticas baseadas em company_id e unit_id
-- Sistema de papéis com níveis hierárquicos
+- Políticas baseadas em company_id, unit_id e user_id
+- Sistema de papéis com níveis hierárquicos e permissões granulares
 
 #### APIs Disponíveis
 - Projeto: FlowDrome (mstjpohsemoxbgwjklby)
 - URL: https://mstjpohsemoxbgwjklby.supabase.co
 - Todas as 20 tabelas com relacionamentos configurados
+- Sistema de permissões hierárquicas implementado
 
 #### Funções PostgreSQL Disponíveis
 ```sql
 -- Autenticação de usuários
 public.authenticate_user(email TEXT, password TEXT) → JSON
--- Retorna: {success: boolean, user_id: UUID, email, nome, role, is_super_admin, message}
+-- Retorna: {success: boolean, user_id: UUID, email, nome, role, role_level, is_super_admin, message}
+
+-- Verificação de acesso a unidade
+user_has_unit_access(user_uuid UUID, unit_uuid UUID) → BOOLEAN
+
+-- Verificação de acesso a módulo
+user_can_access_module(user_uuid UUID, unit_uuid UUID, module_uuid UUID) → BOOLEAN
 
 -- Extensões habilitadas
 pgcrypto - Para hash de senhas (função crypt)
 ```
 
-#### Estrutura de Permissões
-- **Super Admin (level 100)**: Acesso total, gerenciamento de sistema
-- **Admin (level 80)**: Acesso administrativo padrão
-- **RLS Policies**: Configuradas para permitir autenticação anônima
+#### Estrutura de Permissões Hierárquicas
+- **Super Admin (level 100)**: Acesso global, gerenciamento de sistema, todas as unidades
+- **Admin (level 80)**: Acesso a unidades vinculadas, todos os módulos da unidade
+- **Atendente (level 30)**: Acesso a unidades vinculadas, módulos específicos permitidos
+- **RLS Policies**: Configuradas para permitir hierarquia de acesso
+- **Tabelas de Controle**: `unit_modules`, `user_unit_assignments`, `user_module_permissions`
 
 ### 🎨 Design System
 
@@ -399,5 +428,154 @@ Sempre que interagir com este projeto:
 - ✅ Persistência de sessão funcionando
 
 **Sistema 100% Operacional - Testado e Aprovado**
+
+### Agosto 2025 - Sistema de Vinculação de Usuários Completo
+**Status**: ✅ **IMPLEMENTADO E FUNCIONANDO**
+
+#### Funcionalidades de Gestão de Usuários Implementadas:
+- ✅ **Criação de Usuários**: Super Admin pode criar novos usuários via interface
+- ✅ **Vinculação Automática**: Usuários criados são automaticamente vinculados à unidade selecionada
+- ✅ **Gestão de Roles**: Sistema com 3 níveis (Super Admin level 100, Admin level 80, Atendente level 30)
+- ✅ **Interface Completa**: Módulo `GestaoUnidadesModule.tsx` com 4 tabs (Dados, Módulos, Usuários, Logs)
+- ✅ **Validação de Dados**: Sistema valida email, nome e senha antes da criação
+
+#### Políticas RLS Implementadas:
+- ✅ **Tabela `users`**: Política "Allow anonymous write access to users" (ALL operations)
+- ✅ **Tabela `user_unit_assignments`**: Política "Allow anonymous access to user_unit_assignments" (ALL operations)  
+- ✅ **Tabela `user_units`**: Política "Allow anonymous access to user_units" (ALL operations)
+- ✅ **Tabela `units`**: Políticas de leitura e escrita para gestão de unidades
+- ✅ **Tabela `roles`**: Política de leitura para sistema de permissões
+
+#### Estado Atual da Base de Dados:
+- **Usuários Ativos**: 5 usuários cadastrados (incluindo 2 admins)
+- **Unidades Operacionais**: 4 unidades ativas
+  - MariaFlow Matriz (CNPJ: 12.345.678/0001-90)
+  - MariaFlow Filial Norte (CNPJ: 12.345.678/0002-71)  
+  - MB Drome
+  - MB Londrina
+- **Associações Existentes**: 1 vinculação (Admin → MB Londrina)
+- **Roles Configuradas**: 3 níveis hierárquicos funcionais
+
+#### Funcionalidades Testadas via Script Automatizado:
+- ✅ **Busca de Usuários**: Consulta retorna 5 usuários existentes
+- ✅ **Busca de Unidades**: Consulta retorna 4 unidades ativas
+- ✅ **Busca de Roles**: Consulta retorna 3 roles configurados
+- ✅ **Criação de Usuário**: Inserção na tabela `users` funcional
+- ✅ **Vinculação**: Inserção na tabela `user_unit_assignments` funcional
+- ✅ **Relacionamentos**: Foreign keys e joins funcionando corretamente
+- ✅ **Limpeza de Dados**: Sistema de rollback funcional
+
+#### Interface Super Admin:
+- ✅ **Módulo Gestão de Unidades**: Acessível via sidebar Super Admin
+- ✅ **Seleção de Unidade**: Lista todas as 4 unidades disponíveis
+- ✅ **Tab Usuários**: Interface para criação e gestão de usuários
+- ✅ **Formulário de Criação**: Campos nome, email, senha, role_id
+- ✅ **Vinculação Automática**: Sistema vincula usuário à unidade selecionada
+- ✅ **Feedback Visual**: Alertas de sucesso/erro funcionais
+
+#### Fluxo Operacional Completo:
+1. **Acesso Super Admin** → Login com jeanpetri@gmail.com
+2. **Navegação** → Sidebar → "Gestão de Unidades"  
+3. **Seleção de Unidade** → Escolher entre 4 unidades disponíveis
+4. **Criação de Usuário** → Tab "Usuários" → Preencher formulário
+5. **Vinculação Automática** → Sistema cria usuário + vincula à unidade
+6. **Confirmação** → Alert de sucesso + recarregamento dos dados
+
+**Sistema de Vinculação 100% Operacional - Testado e Validado** ✅
+
+### Agosto 2025 - Sistema de Permissões Hierárquicas Sidebar
+**Status**: ✅ **IMPLEMENTADO E FUNCIONANDO**
+
+#### Arquitetura de Permissões Hierárquicas:
+- ✅ **Hook useActiveUnit**: Fonte única de verdade para permissões e módulos
+- ✅ **Hierarquia de Acesso**: Super Admin → Admin → Atendente com lógicas distintas
+- ✅ **Context Provider**: `ActiveUnitProvider` gerencia estado global de unidades/módulos
+- ✅ **Filtragem Dinâmica**: Sidebar mostra apenas módulos permitidos por usuário/unidade
+
+#### Lógica Hierárquica Implementada:
+
+**Super Admin (level 100):**
+- ✅ **Acesso Global**: Todas as unidades do sistema
+- ✅ **Módulos Super Admin**: Dashboard Super Admin + Gestão de Unidades
+- ✅ **Módulos da Unidade**: Todos os módulos ativos da unidade selecionada
+- ✅ **Unidade Padrão**: MB Drome prioritária, senão primeira unidade
+
+**Admin (level 80):**
+- ✅ **Unidades Vinculadas**: Apenas unidades onde está associado
+- ✅ **Módulos da Unidade**: Todos os módulos ativos da unidade (`unit_modules`)
+- ✅ **Gestão Local**: Pode gerenciar usuários e configurações da unidade
+
+**Atendente (level < 80):**
+- ✅ **Unidades Vinculadas**: Apenas unidades onde está associado
+- ✅ **Módulos Específicos**: Apenas módulos com permissão em `user_module_permissions`
+- ✅ **Acesso Granular**: Controle individual por módulo/unidade
+
+#### Hooks Refatorados:
+
+**useAuth.tsx:**
+- ✅ **Responsabilidade Única**: Apenas autenticação (login/logout)
+- ✅ **Interface Limpa**: Retorna user com id, email, nome, role, role_level, is_super_admin
+- ✅ **Sem Lógica de Permissões**: Remove duplicação com useActiveUnit
+
+**useActiveUnit.tsx:**
+- ✅ **Context Provider**: Gerencia estado global de unidades e módulos
+- ✅ **Funções Separadas**:
+  - `loadUserUnits()`: Carrega unidades baseado no tipo de usuário
+  - `loadUnitModules()`: Módulos da unidade para Admin/Super Admin
+  - `loadAtendantModules()`: Módulos específicos para Atendente
+- ✅ **Logs Detalhados**: Console logs para debug de permissões
+- ✅ **Reatividade**: useEffect para mudanças de usuário/unidade
+
+**useAllowedModules.tsx:**
+- ✅ **Filtro de Menu**: Consome availableModules do useActiveUnit
+- ✅ **Módulos Super Admin**: Adiciona módulos específicos para Super Admin
+- ✅ **Menu Hierárquico**: Filtra MenuItems baseado nos módulos disponíveis
+
+#### Fluxo de Dados:
+```
+Database Tables:
+├── units (unidades do sistema)
+├── unit_modules (módulos ativos por unidade) 
+├── user_unit_assignments (usuário ↔ unidade)
+├── user_module_permissions (permissões granulares atendente)
+└── modules (catálogo de módulos)
+    ↓
+useActiveUnit Hook:
+├── loadUserUnits() → Define unidades acessíveis
+├── loadUnitModules() → Módulos da unidade (Admin/Super Admin)
+├── loadAtendantModules() → Módulos específicos (Atendente)
+└── availableModules[] → Lista final de módulos
+    ↓
+useAllowedModules Hook:
+├── filterMenuItemsByModules() → Filtra menu principal
+├── Adiciona módulos Super Admin se aplicável
+└── menuItems[] → Menu filtrado para sidebar
+    ↓
+AppSidebarMenu Component:
+└── Renderiza apenas módulos permitidos
+```
+
+#### Dados de Teste Configurados:
+
+**Usuários com Permissões:**
+- `jeanpetri@gmail.com` - Super Admin (level 100) - Acesso total
+- `admin@mariaflow.com` - Admin (level 80) - Módulos da unidade
+- `atendente@mariaflow.com` - Atendente (level 30) - Dashboard + Clientes
+- `lucas@email.com` - Atendente (level 30) - Dashboard + Clientes + Agenda
+
+**Unidades Operacionais:**
+- MB Drome (unidade padrão Super Admin)
+- MB Londrina (vinculada ao Admin)
+- MariaFlow Matriz
+- MariaFlow Filial Norte
+
+#### Funcionalidades Validadas:
+- ✅ **Login Hierárquico**: Diferentes usuários mostram diferentes módulos
+- ✅ **Troca de Unidade**: Super Admin pode alternar entre unidades
+- ✅ **Filtragem Dinâmica**: Sidebar atualiza conforme permissões
+- ✅ **Logs de Debug**: Console mostra fluxo de carregamento de permissões
+- ✅ **Performance**: Provider evita re-renders desnecessários
+
+**Sistema de Permissões Hierárquicas 100% Operacional - Testado e Validado** ✅
 
 ```

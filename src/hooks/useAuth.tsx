@@ -6,10 +6,8 @@ interface User {
   email: string;
   nome: string | null;
   role: string;
+  role_level: number;
   is_super_admin?: boolean;
-  unit_id?: string;
-  unit_name?: string;
-  allowed_modules?: string[];
 }
 
 interface AuthContextType {
@@ -64,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Tentativa 1: Usar RPC (método preferido)
       try {
         const { data, error } = await supabase.rpc('authenticate_user', {
-          email,
-          password
+          p_email: email,
+          p_password: password
         });
 
         if (!error && data) {
@@ -77,8 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: result.email,
               nome: result.nome,
               role: result.role,
+              role_level: result.role_level || 0,
               is_super_admin: result.is_super_admin || false
             };
+
+            console.log('useAuth - RPC success, user data:', userData);
             
             setUser(userData);
             localStorage.setItem('mariaflow_user', JSON.stringify(userData));
@@ -103,7 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_active,
           role_id,
           roles:role_id (
-            display_name
+            name,
+            display_name,
+            level
           )
         `)
         .eq('email', email)
@@ -133,80 +136,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('is_active', true)
         .single();
 
+      const roleLevel = users.roles?.level || 0;
+      const isSuperAdmin = !!superAdmin;
+
       let userData: User = {
         id: users.id,
         email: users.email,
         nome: users.name,
         role: users.roles?.display_name || 'Usuário',
-        is_super_admin: !!superAdmin
+        role_level: roleLevel,
+        is_super_admin: isSuperAdmin
       };
 
-      // Se não for super admin, buscar informações da unidade e módulos permitidos
-      if (!superAdmin) {
-        console.log('useAuth - Usuário não é super admin, buscando dados da unidade...');
-        
-        // Buscar unidade do usuário
-        const { data: unitAssignments, error: unitError } = await supabase
-          .from('user_unit_assignments')
-          .select('unit_id')
-          .eq('user_id', users.id);
-
-        console.log('useAuth - Unit assignments query result:', { unitAssignments, unitError });
-
-        if (unitAssignments && unitAssignments.length > 0) {
-          const unitId = unitAssignments[0].unit_id;
-          console.log('useAuth - Unit ID found:', unitId);
-          
-          // Buscar dados da unidade
-          const { data: unitData, error: unitDataError } = await supabase
-            .from('units')
-            .select('id, name')
-            .eq('id', unitId)
-            .single();
-
-          console.log('useAuth - Unit data:', { unitData, unitDataError });
-
-          // Buscar módulos permitidos usando uma query mais simples
-          const { data: modulesList, error: modulesListError } = await supabase
-            .from('unit_modules')
-            .select(`
-              modules (
-                name
-              )
-            `)
-            .eq('unit_id', unitId)
-            .eq('is_active', true);
-
-          console.log('useAuth - Direct modules query:', { modulesList, modulesListError });
-
-          if (modulesList && modulesList.length > 0) {
-            const moduleNames = modulesList
-              .map((item: any) => item.modules?.name)
-              .filter(Boolean);
-            
-            console.log('useAuth - Extracted module names:', moduleNames);
-
-            userData = {
-              ...userData,
-              unit_id: unitId,
-              unit_name: unitData?.name || 'Unidade não encontrada',
-              allowed_modules: moduleNames
-            };
-
-            console.log('useAuth - userData with modules:', userData);
-          } else {
-            console.log('useAuth - No modules found for unit');
-          }
-        } else {
-          console.log('useAuth - Nenhuma unidade encontrada para o usuário');
-        }
-      }
+      console.log('useAuth - Fallback SQL success, user data:', userData);
       
-      console.log('useAuth - Setting user data:', userData);
-      console.log('useAuth - User is_super_admin:', userData.is_super_admin);
-      console.log('useAuth - User unit_id:', userData.unit_id);
-      console.log('useAuth - User unit_name:', userData.unit_name);
-      console.log('useAuth - User allowed_modules:', userData.allowed_modules);
+      setUser(userData);
+      localStorage.setItem('mariaflow_user', JSON.stringify(userData));
+      
+      return { success: true };
+      
       setUser(userData);
       localStorage.setItem('mariaflow_user', JSON.stringify(userData));
       

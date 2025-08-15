@@ -1,19 +1,444 @@
 
 # MariaFlow - Documentação Completa dos Módulos
 
-## Índice
+*Atualizada em 15/08/2025 - Sistema de Permissões Hierárquicas Implementado*
+
+## 📋 Índice
 
 1. [Visão Geral do Sistema](#visão-geral-do-sistema)
-2. [Dashboard](#dashboard)
-3. [Módulo Comercial](#módulo-comercial)
-4. [Módulo de Clientes](#módulo-de-clientes)
-5. [Módulo de Profissionais](#módulo-de-profissionais)
-6. [Módulo Financeiro](#módulo-financeiro)
-7. [Módulo de Marketing](#módulo-de-marketing)
-8. [Módulo de Compras](#módulo-de-compras)
-9. [Módulo de Suporte](#módulo-de-suporte)
-10. [Maria Uni](#maria-uni)
-11. [Módulo de Agendamentos](#módulo-de-agendamentos)
+2. [🔴 Módulos Super Admin](#módulos-super-admin)
+3. [🟡 Módulos de Unidade](#módulos-de-unidade)
+4. [Sistema de Permissões](#sistema-de-permissões)
+5. [Mapeamento Técnico](#mapeamento-técnico)
+
+---
+
+## Visão Geral do Sistema
+
+O MariaFlow implementa um **sistema hierárquico de módulos** com 3 níveis de acesso:
+
+- **🔴 Super Admin (level 100)**: Módulos especiais + módulos da unidade ativa
+- **🟡 Admin (level 80)**: Todos os módulos habilitados na unidade
+- **🟢 Atendente (level 30)**: Apenas módulos específicos liberados
+
+### Arquitetura de Acesso
+
+```
+🔴 Super Admin
+├── Super Admin Dashboard (exclusivo)
+├── Gestão de Unidades (exclusivo)
+└── + Módulos da unidade ativa selecionada
+
+🟡 Admin de Unidade  
+└── Módulos habilitados na unidade (unit_modules)
+
+🟢 Atendente
+└── Módulos específicos liberados (user_module_permissions)
+```
+
+---
+
+## 🔴 Módulos Super Admin
+
+### Super Admin Dashboard
+**Acesso**: Exclusivo Super Admin  
+**ID Frontend**: `super-admin`  
+**Descrição**: Visão global do sistema com métricas consolidadas
+
+**Funcionalidades:**
+- 📊 Métricas globais de todas as unidades
+- 👥 Resumo de usuários por unidade e role
+- 📈 Performance agregada do sistema
+- 🎯 KPIs principais da franquia
+- 🔧 Configurações globais do sistema
+
+### Gestão de Unidades
+**Acesso**: Exclusivo Super Admin  
+**ID Frontend**: `gestao-unidades`  
+**Descrição**: Controle completo de unidades, usuários e permissões
+
+**Funcionalidades Implementadas:**
+
+#### 🏢 Gerenciamento de Unidades
+- ✅ **Listagem Completa**: Visualização de todas as unidades
+- ✅ **Detalhes da Unidade**: Nome, código, endereço, contatos
+- ✅ **Status Operacional**: Controle ativo/inativo
+- ✅ **Interface em Abas**: Dados, Módulos, Usuários, Logs
+
+#### 👥 Gestão de Usuários (Implementado)
+- ✅ **Criação de Usuários**: Interface funcional para cadastro
+- ✅ **Vinculação Automática**: Associação à unidade selecionada
+- ✅ **Role Padrão**: Atendente (level 30) atribuído automaticamente
+- ✅ **Validação**: Nome, email e senha obrigatórios
+- ✅ **Feedback**: Alertas de sucesso/erro integrados
+
+#### ⚙️ Configuração de Módulos
+- ✅ **Ativação/Desativação**: Toggles para cada módulo
+- ✅ **Interface Grid**: Layout moderno e responsivo
+- ✅ **Categorização**: Módulos organizados por tipo
+- ✅ **Persistência**: Configurações salvas no banco (unit_modules)
+
+#### 📝 Sistema de Logs
+- ✅ **Atividades de Usuário**: Login, criação, alterações
+- ✅ **Mudanças de Configuração**: Módulos ativados/desativados
+- ✅ **Auditoria Completa**: Quem, quando, o que mudou
+- ✅ **Interface de Visualização**: Lista ordenada por data
+
+---
+
+## 🟡 Módulos de Unidade
+
+*Acessíveis por Admin (todos) e Atendente (se liberado)*
+### Dashboard
+**ID Frontend**: `dashboard`  
+**Categoria**: Core  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📊 **Visão Geral da Unidade**: Métricas específicas da unidade
+- 🎯 **KPIs Principais**: Vendas, leads, agendamentos, clientes
+- 📈 **Gráficos Interativos**: Performance temporal e comparativa
+- 🔔 **Notificações**: Alertas e lembretes importantes
+- 📋 **Resumo de Atividades**: Últimas ações realizadas
+
+### Agenda
+**ID Frontend**: `agenda`  
+**Categoria**: Atendimento  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📅 **Calendário Interativo**: Visualização mensal/semanal/diária
+- ⏰ **Gestão de Horários**: Configuração de horários disponíveis
+- 👥 **Agendamento de Clientes**: Interface para marcar consultas
+- 🔔 **Lembretes Automáticos**: Notificações de agendamentos
+- 📊 **Relatórios de Agenda**: Análise de ocupação e performance
+
+### Agendamentos
+**ID Frontend**: `agendamentos`  
+**Categoria**: Atendimento  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📋 **Lista de Agendamentos**: Visualização completa dos agendamentos
+- ✅ **Status de Atendimento**: Confirmado, em andamento, concluído
+- 🔍 **Filtros Avançados**: Por data, profissional, serviço, status
+- 📝 **Observações**: Notas sobre cada agendamento
+- 📊 **Métricas de Agendamento**: Taxa de comparecimento, cancelamentos
+
+### Clientes
+**ID Frontend**: `clientes`  
+**Categoria**: Atendimento  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 👥 **Cadastro Completo**: Dados pessoais, contatos, preferências
+- 📋 **Histórico de Atendimentos**: Timeline completa de interações
+- 💰 **Histórico Financeiro**: Compras, pagamentos, pendências
+- 📱 **Integração WhatsApp**: Comunicação direta via WhatsApp
+- 🎯 **Segmentação**: Classificação por perfil e comportamento
+
+### Pipeline
+**ID Frontend**: `pipeline`  
+**Categoria**: Comercial  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 🎯 **Kanban de Vendas**: Visualização em funil de oportunidades
+- 📞 **Gestão de Leads**: Captura, qualificação e follow-up
+- 💬 **Histórico de Interações**: Todas as comunicações registradas
+- 📊 **Métricas de Conversão**: Taxa de fechamento por etapa
+- 🔄 **Automação de Follow-up**: Lembretes e tarefas automáticas
+
+### Tickets
+**ID Frontend**: `tickets`  
+**Categoria**: Suporte  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 🎫 **Sistema de Chamados**: Abertura e gestão de tickets
+- ⚡ **Níveis de Prioridade**: Crítico, alto, médio, baixo
+- 👤 **Atribuição**: Designação para profissionais específicos
+- 📊 **SLA**: Controle de tempo de resposta e resolução
+- 📈 **Relatórios de Suporte**: Métricas de atendimento
+
+### Profissionais
+**ID Frontend**: `profissionais`  
+**Categoria**: Recursos Humanos  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 👨‍💼 **Cadastro de Equipe**: Dados pessoais e profissionais
+- 📅 **Gestão de Horários**: Disponibilidade e escalas
+- 💰 **Controle de Comissões**: Cálculo automático de comissões
+- 📊 **Performance Individual**: Métricas por profissional
+- 🎓 **Certificações**: Controle de qualificações e cursos
+
+### Financeiro
+**ID Frontend**: `financeiro`  
+**Categoria**: Financeiro  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 💰 **Fluxo de Caixa**: Entradas e saídas detalhadas
+- 📊 **Relatórios Financeiros**: DRE, balanço, lucratividade
+- 💳 **Gestão de Pagamentos**: Controle de recebimentos e pagamentos
+- 📈 **Análise de Performance**: ROI, margem, ticket médio
+- 🔄 **Conciliação Bancária**: Integração com extratos bancários
+
+### Cashback
+**ID Frontend**: `cashback`  
+**Categoria**: Fidelização  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 🎁 **Programa de Pontos**: Sistema de recompensas para clientes
+- 💳 **Cartão Fidelidade**: Gestão de cartões virtuais
+- 🎯 **Campanhas Promocionais**: Criação de ofertas especiais
+- 📊 **Relatórios de Uso**: Análise de engajamento do programa
+- 🔄 **Resgate de Pontos**: Interface para troca de recompensas
+
+### Materiais
+**ID Frontend**: `materiais`  
+**Categoria**: Marketing  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📁 **Biblioteca de Materiais**: Organização de arquivos e documentos
+- 🎨 **Editor de Materiais**: Criação e edição de peças gráficas
+- 📋 **Controle de Estoque**: Gestão de materiais físicos
+- 📊 **Relatórios de Uso**: Tracking de downloads e utilização
+- 🔄 **Versionamento**: Controle de versões dos materiais
+
+### Materiais Marketing
+**ID Frontend**: `materiais-marketing`  
+**Categoria**: Marketing  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 🎨 **Peças Promocionais**: Criação de materiais de divulgação
+- 📱 **Templates Digitais**: Modelos para redes sociais
+- 🖨️ **Materiais Impressos**: Flyers, cartões, banners
+- 📅 **Calendário de Campanhas**: Planejamento de ações de marketing
+- 📊 **Performance de Materiais**: Análise de efetividade
+
+### Uniformes
+**ID Frontend**: `uniformes`  
+**Categoria**: Recursos Humanos  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 👕 **Catálogo de Uniformes**: Gestão de peças disponíveis
+- 📏 **Controle de Tamanhos**: Gestão de estoque por tamanho
+- 📋 **Pedidos**: Sistema de solicitação de uniformes
+- 💰 **Controle de Custos**: Gestão de gastos com uniformes
+- 📊 **Relatórios**: Análise de uso e reposição
+
+### Publicações
+**ID Frontend**: `publicacoes`  
+**Categoria**: Marketing  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📝 **Editor de Conteúdo**: Criação de posts e artigos
+- 📅 **Agendamento**: Publicação programada em redes sociais
+- 📊 **Métricas de Engajamento**: Análise de performance
+- 🎯 **Segmentação de Público**: Direcionamento de conteúdo
+- 🔄 **Aprovação de Conteúdo**: Workflow de validação
+
+### Recrutadora
+**ID Frontend**: `recrutadora`  
+**Categoria**: Recursos Humanos  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📋 **Gestão de Vagas**: Criação e publicação de oportunidades
+- 👤 **Banco de Currículos**: Armazenamento e organização
+- 📞 **Processo Seletivo**: Etapas de entrevistas e avaliações
+- 📊 **Métricas de RH**: Tempo de contratação, turnover
+- 🎯 **Matching**: Compatibilidade candidato-vaga
+
+### Base Conhecimento
+**ID Frontend**: `base-conhecimento`  
+**Categoria**: Educação  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 📚 **Biblioteca Digital**: Documentos, manuais, procedimentos
+- 🔍 **Sistema de Busca**: Localização rápida de informações
+- 📋 **Artigos e Tutoriais**: Conteúdo educativo estruturado
+- 🎥 **Vídeos Treinamento**: Biblioteca de vídeos educativos
+- 📊 **Tracking de Leitura**: Acompanhamento de acesso
+
+### MariaUni
+**ID Frontend**: `maria-uni`  
+**Categoria**: Educação  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- 🎓 **Cursos Online**: Plataforma de educação à distância
+- 📋 **Avaliações**: Sistema de provas e certificações
+- 📊 **Progresso de Aprendizado**: Tracking individual de evolução
+- 🏆 **Certificações**: Emissão de certificados de conclusão
+- 👥 **Turmas Virtuais**: Organização de grupos de estudo
+
+### Configuração Módulos
+**ID Frontend**: `configuracao-modulos`  
+**Categoria**: Administração  
+**Acesso**: Admin + Atendente (se liberado)
+
+**Funcionalidades:**
+- ⚙️ **Configurações da Unidade**: Personalização por unidade
+- 🔧 **Parâmetros do Sistema**: Configurações técnicas
+- 👥 **Permissões de Usuário**: Gestão granular de acessos
+- 📊 **Relatórios de Configuração**: Auditoria de mudanças
+- 🔄 **Backup de Configurações**: Restore de configurações anteriores
+   ---
+
+## Sistema de Permissões
+
+### 🔧 Como Funciona
+
+**🔴 Super Admin (level 100)**
+```typescript
+// Sempre inclui módulos especiais
+const superAdminModules = ['super-admin', 'gestao-unidades'];
+// Adiciona módulos da unidade ativa
+const unitModules = availableModules.map(m => m.module_name);
+const allModules = [...superAdminModules, ...unitModules];
+```
+
+**🟡 Admin (level 80)**
+```sql
+-- Busca todos os módulos habilitados na unidade
+SELECT m.name as module_name, um.unit_id
+FROM unit_modules um
+JOIN modules m ON m.id = um.module_id
+WHERE um.unit_id = $1 AND um.is_active = true;
+```
+
+**🟢 Atendente (level 30)**
+```sql
+-- Busca apenas módulos específicos liberados
+SELECT m.name as module_name, ump.unit_id
+FROM user_module_permissions ump
+JOIN modules m ON m.id = ump.module_id
+WHERE ump.user_id = $1 AND ump.unit_id = $2 AND ump.is_active = true;
+```
+
+### 🎯 Exemplos de Configuração
+
+**Admin da Unidade MB Drome:**
+- Vê: Dashboard, Agenda, Clientes, Pipeline, Tickets, Profissionais, Financeiro, etc.
+- Fonte: Todos os módulos em `unit_modules` onde `unit_id = MB Drome`
+
+**Atendente Maria Silva:**
+- Vê apenas: Dashboard, Clientes
+- Fonte: Registros específicos em `user_module_permissions`
+
+**Atendente João Santos:**
+- Vê apenas: Dashboard, Clientes, Agenda
+- Fonte: Registros específicos em `user_module_permissions`
+
+---
+
+## Mapeamento Técnico
+
+### Frontend → Backend
+
+```typescript
+const MODULE_MAPPING = {
+  // Super Admin exclusivos
+  'super-admin': 'Super Admin Dashboard',
+  'gestao-unidades': 'Gestão Unidades',
+  
+  // Módulos de unidade
+  'dashboard': 'Dashboard',
+  'agenda': 'Agenda',
+  'agendamentos': 'Agendamentos',
+  'clientes': 'Clientes',
+  'pipeline': 'Pipeline',
+  'tickets': 'Tickets',
+  'profissionais': 'Profissionais',
+  'financeiro': 'Financeiro',
+  'cashback': 'Cashback',
+  'materiais': 'Materiais',
+  'materiais-marketing': 'Materiais Marketing',
+  'uniformes': 'Uniformes',
+  'publicacoes': 'Publicações',
+  'recrutadora': 'Recrutadora',
+  'base-conhecimento': 'Base Conhecimento',
+  'maria-uni': 'MariaUni',
+  'configuracao-modulos': 'Configuração Módulos'
+};
+```
+
+### Estrutura de Menu
+
+```typescript
+// Estrutura hierárquica do menu
+const menuItems = [
+  {
+    id: 'super-admin',
+    title: 'Super Admin',
+    icon: Crown,
+    // Visível apenas para Super Admin
+  },
+  {
+    id: 'dashboard',
+    title: 'Dashboard', 
+    icon: BarChart3,
+    // Visível para todos (se liberado)
+  },
+  {
+    title: 'Atendimento',
+    items: [
+      { id: 'agenda', title: 'Agenda', icon: Calendar },
+      { id: 'clientes', title: 'Clientes', icon: Users },
+      { id: 'pipeline', title: 'Pipeline', icon: TrendingUp },
+      // ... outros módulos de atendimento
+    ]
+  },
+  // ... outras categorias
+];
+```
+
+### Database Tables
+
+```sql
+-- Módulos disponíveis no sistema
+modules: id, name, display_name, category, icon, is_active
+
+-- Módulos habilitados por unidade (Admin)
+unit_modules: unit_id, module_id, is_active, configured_by
+
+-- Permissões específicas de módulos (Atendente)  
+user_module_permissions: user_id, module_id, unit_id, is_active, granted_by
+```
+
+## 🚀 Status de Implementação
+
+### ✅ Completamente Implementado
+- [x] **Sistema Hierárquico**: 3 níveis funcionando corretamente
+- [x] **Database Schema**: Todas as tabelas criadas e relacionadas
+- [x] **Hooks de Permissão**: useAuth, useActiveUnit, useAllowedModules
+- [x] **Sidebar Dinâmica**: Renderização baseada em permissões
+- [x] **Super Admin Dashboard**: Interface exclusiva para super admins
+- [x] **Gestão de Unidades**: Controle completo de unidades e usuários
+- [x] **Dados de Teste**: Usuários configurados para validação
+
+### 🎯 Pronto para Produção
+- **Interface**: http://localhost:8081/
+- **Usuários Teste**: 4 níveis diferentes configurados
+- **Permissões**: Granulares e hierárquicas funcionando
+- **Validação**: Sistema testado e operacional
+
+---
+
+*Documentação atualizada em 15/08/2025 - Sistema de Permissões Hierárquicas totalmente implementado e funcional.*
+
+---
+
+## Conclusãoamentos)
 12. [Funcionalidades Transversais](#funcionalidades-transversais)
 
 ---
@@ -536,11 +961,11 @@ A plataforma está preparada para crescimento e evolução contínua, sempre foc
 
 ---
 
-**Versão do Documento**: 1.0  
+**Versão do Documento**: 1.1  
 **Data de Criação**: 2025-01-14  
-**Última Atualização**: 2025-01-14  
+**Última Atualização**: 2025-08-15  
 **Autor**: Equipe de Desenvolvimento MariaFlow
 
 ---
 
-*Este documento é um guia vivo e será atualizado conforme a evolução do sistema.*
+*Este documento é um guia vivo e será atualizado conforme a evolução do sistema. Última atualização: Implementação do Sistema de Vinculação de Usuários (15/08/2025).*

@@ -155,11 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       return { success: true };
       
-      setUser(userData);
-      localStorage.setItem('mariaflow_user', JSON.stringify(userData));
-      
-      return { success: true };
-      
     } catch (error) {
       console.error('Erro no login:', error);
       return { success: false, error: 'Erro inesperado ao fazer login' };

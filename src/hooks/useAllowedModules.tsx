@@ -100,7 +100,7 @@ const filterMenuItemsByModules = (allowedModuleNames: string[], isSuperAdmin: bo
 // Função para mapear ID do menu para nome do módulo no banco
 const getModuleNameFromId = (menuId: string): string => {
   const moduleMap: { [key: string]: string } = {
-    // Menu items principais
+    // Menu items principais (devem corresponder aos nomes exatos no banco)
     'dashboard': 'Dashboard',
     'clientes': 'Clientes',
     'maria-uni': 'MariaUni',
@@ -110,7 +110,7 @@ const getModuleNameFromId = (menuId: string): string => {
     'agendamentos': 'Agenda',
     
     // Submenu items - Comercial
-    'pipeline': 'Pipeline',
+    'pipeline': 'Leads', // CORREÇÃO: no banco é "Leads", não "Pipeline"
     'cashback': 'Cashback',
     
     // Submenu items - Profissionais
@@ -141,7 +141,7 @@ const getModuleNameFromId = (menuId: string): string => {
     // Submenu items - Suporte
     'suporte': 'Tickets',
     'tickets': 'Tickets',
-    'base-conhecimento': 'Base Conhecimento',
+    'base-conhecimento': 'Base de Conhecimento',
     
     // Legacy mappings (manter por compatibilidade)
     'usuarios': 'Usuários',

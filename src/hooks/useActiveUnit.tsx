@@ -194,8 +194,8 @@ export function ActiveUnitProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('user_id', user.id)
       .eq('unit_id', activeUnit.id)
-      .eq('is_active', true)
-      .eq('can_view', true);
+      .eq('has_access', true)
+      .eq('can_read', true);
 
     if (permError) throw permError;
 

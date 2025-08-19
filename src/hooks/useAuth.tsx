@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface User {
   id: string;
   email: string;
-  nome: string | null;
+  name: string | null;
   role: string;
   role_level: number;
   is_super_admin?: boolean;
@@ -142,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let userData: User = {
         id: users.id,
         email: users.email,
-        nome: users.name,
+        name: users.name,
         role: users.roles?.display_name || 'Usuário',
         role_level: roleLevel,
         is_super_admin: isSuperAdmin

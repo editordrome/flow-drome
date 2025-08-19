@@ -8,19 +8,22 @@ export const useAllowedModules = () => {
   const { availableModules, activeUnit, loading } = useActiveUnit();
 
   const allowedModules = useMemo(() => {
-    console.log('useAllowedModules - User:', user);
-    console.log('useAllowedModules - Active Unit:', activeUnit);
-    console.log('useAllowedModules - Available Modules:', availableModules);
+    console.log('\n🔄 useAllowedModules RECALCULANDO:');
+    console.log('   - User:', user?.email, 'Role Level:', user?.role_level, 'Is Super Admin:', user?.is_super_admin);
+    console.log('   - Active Unit:', activeUnit?.name, 'ID:', activeUnit?.id);
+    console.log('   - Available Modules:', availableModules.length);
+    availableModules.forEach(m => console.log(`      * ${m.module_display_name} (${m.module_name})`));
+    console.log('   - Loading:', loading);
     
     // Se ainda está carregando, retornar array vazio
     if (loading) {
-      console.log('useAllowedModules - Still loading, returning empty array');
+      console.log('   ⏳ Still loading, returning empty array');
       return [];
     }
     
     // Se for super admin, incluir módulos super admin + módulos da unidade ativa
     if (user?.is_super_admin) {
-      console.log('useAllowedModules - Super admin detected');
+      console.log('   👑 Super admin detected');
       
       // Sempre incluir módulos super admin
       const superAdminModules = ['super-admin', 'gestao-unidades'];
@@ -29,13 +32,20 @@ export const useAllowedModules = () => {
       const unitModuleNames = availableModules.map(m => m.module_name);
       const allAllowedModules = [...superAdminModules, ...unitModuleNames];
       
-      console.log('useAllowedModules - Super admin modules:', allAllowedModules);
+      console.log('   📋 Super admin final modules:', allAllowedModules);
       return filterMenuItemsByModules(allAllowedModules, true);
     }
 
     // Para outros usuários (Admin e Atendente), usar módulos disponíveis da unidade
     const unitModuleNames = availableModules.map(m => m.module_name);
-    console.log('useAllowedModules - Regular user modules:', unitModuleNames);
+    
+    // Se for Admin (level 80), adicionar acesso ao menu Configuração
+    if (user?.role_level >= 80) {
+      unitModuleNames.push('configuracao-admin');
+      console.log('   👨‍💼 Admin detected, adding configuracao-admin');
+    }
+    
+    console.log('   📋 Regular user final modules:', unitModuleNames);
     
     return filterMenuItemsByModules(unitModuleNames, false);
   }, [user, availableModules, activeUnit, loading]);
@@ -45,112 +55,143 @@ export const useAllowedModules = () => {
 
 // Função para filtrar menuItems baseado nos módulos permitidos
 const filterMenuItemsByModules = (allowedModuleNames: string[], isSuperAdmin: boolean): MenuItem[] => {
+  console.log('🔍 filterMenuItemsByModules INICIADO:');
+  console.log('   - allowedModuleNames:', allowedModuleNames);
+  console.log('   - isSuperAdmin:', isSuperAdmin);
+  
   const filteredMenuItems: MenuItem[] = [];
 
   menuItems.forEach(menuItem => {
+    console.log(`\n📋 Processando menu principal: ${menuItem.id} (${menuItem.label})`);
+    
     if (menuItem.submenu) {
       // Se tem submenu, verificar cada item do submenu
       const allowedSubmenuItems = menuItem.submenu.filter(subItem => {
         const moduleName = getModuleNameFromId(subItem.id);
-        console.log(`filterMenuItemsByModules - Checking submenu item: ${subItem.id} -> ${moduleName}`);
+        console.log(`   🔍 Verificando submenu: ${subItem.id} -> módulo: ${moduleName}`);
         
         // Para super-admin menu items, só permitir para super admin
-        if (moduleName === 'super-admin') return isSuperAdmin;
+        if (moduleName === 'super-admin') {
+          const allowed = isSuperAdmin;
+          console.log(`   🔐 Super admin module: ${allowed}`);
+          return allowed;
+        }
+        
+        // Para gestão de usuários, permitir para Admin (level 80+) e Super Admin
+        if (subItem.id === 'gestao-usuarios') {
+          const allowed = allowedModuleNames.includes('configuracao-admin') || isSuperAdmin;
+          console.log(`   👥 Gestão usuários: ${allowed} (tem configuracao-admin: ${allowedModuleNames.includes('configuracao-admin')})`);
+          return allowed;
+        }
         
         // Para outros módulos, verificar se está na lista de permitidos
         const isAllowed = allowedModuleNames.includes(moduleName);
-        console.log(`filterMenuItemsByModules - Submenu module ${moduleName} allowed: ${isAllowed}`);
+        console.log(`   ✅ Módulo ${moduleName} permitido: ${isAllowed}`);
         
         return isAllowed;
       });
 
+      console.log(`   📊 Submenu permitido: ${allowedSubmenuItems.length}/${menuItem.submenu.length}`);
+      allowedSubmenuItems.forEach(item => console.log(`      - ${item.label}`));
+
       // Se algum item do submenu é permitido, incluir o menu principal
       if (allowedSubmenuItems.length > 0) {
+        console.log(`   ✅ INCLUINDO menu principal: ${menuItem.label}`);
         filteredMenuItems.push({
           ...menuItem,
           submenu: allowedSubmenuItems
         });
+      } else {
+        console.log(`   ❌ EXCLUINDO menu principal: ${menuItem.label} (nenhum submenu permitido)`);
       }
     } else {
       // Se não tem submenu, verificar se o módulo é permitido
       const moduleName = getModuleNameFromId(menuItem.id);
-      console.log(`filterMenuItemsByModules - Checking menu item: ${menuItem.id} -> ${moduleName}`);
+      console.log(`   🔍 Menu simples: ${menuItem.id} -> módulo: ${moduleName}`);
       
       // Para super-admin menu items, só permitir para super admin
       if (moduleName === 'super-admin') {
         if (isSuperAdmin) {
+          console.log(`   ✅ INCLUINDO menu super admin: ${menuItem.label}`);
           filteredMenuItems.push(menuItem);
+        } else {
+          console.log(`   ❌ EXCLUINDO menu super admin: ${menuItem.label} (não é super admin)`);
         }
       } else {
         // Para outros módulos, verificar se está na lista de permitidos
         const isAllowed = allowedModuleNames.includes(moduleName);
-        console.log(`filterMenuItemsByModules - Module ${moduleName} allowed: ${isAllowed}`);
+        console.log(`   ✅ Módulo ${moduleName} permitido: ${isAllowed}`);
         
         if (isAllowed) {
+          console.log(`   ✅ INCLUINDO menu: ${menuItem.label}`);
           filteredMenuItems.push(menuItem);
+        } else {
+          console.log(`   ❌ EXCLUINDO menu: ${menuItem.label}`);
         }
       }
     }
   });
 
-  console.log('filterMenuItemsByModules - Final filtered menu items:', filteredMenuItems);
+  console.log('\n🎯 RESULTADO FINAL filterMenuItemsByModules:');
+  filteredMenuItems.forEach((item, index) => {
+    console.log(`${index + 1}. ${item.label}`);
+    if (item.submenu) {
+      item.submenu.forEach(sub => console.log(`   - ${sub.label}`));
+    }
+  });
+  
   return filteredMenuItems;
 };
 
 // Função para mapear ID do menu para nome do módulo no banco
-const getModuleNameFromId = (menuId: string): string => {
-  const moduleMap: { [key: string]: string } = {
-    // Menu items principais
+const getModuleNameFromId = (id: string): string => {
+  // Mapeamento de IDs de menu para módulos de permissão
+  const idToModuleMap: Record<string, string> = {
+    // Core modules - nomes como aparecem no banco
     'dashboard': 'Dashboard',
-    'clientes': 'Clientes',
-    'maria-uni': 'MariaUni',
+    'gestao': 'Gestao', // Submenu Gestão = módulo Gestão específico (não Dashboard!)
+    'usuarios': 'Usuários',
+    'agendamentos': 'Agenda', // Submenu Atendimentos = módulo Agenda
     
-    // Submenu items - Dashboard
-    'gestao': 'Dashboard',
-    'agendamentos': 'Agenda',
-    
-    // Submenu items - Comercial
-    'pipeline': 'Pipeline',
-    'cashback': 'Cashback',
-    
-    // Submenu items - Profissionais
-    'profissionais': 'Profissionais',
-    'profissionais-lista': 'Profissionais',
-    'profissionais-status': 'Profissionais',
+    // Atendimento modules
     'agenda': 'Agenda',
-    'recrutadora': 'Recrutadora',
+    'clientes': 'Clientes',
+    'pipeline': 'Pipeline',
+    'tickets': 'Tickets',
     
-    // Submenu items - Financeiro
+    // Financeiro modules  
     'financeiro': 'Financeiro',
     'dashboard-financeiro': 'Financeiro',
-    'relatorios': 'Financeiro',
-    'contas-pagar': 'Financeiro',
-    'contas-receber': 'Financeiro',
-    'fluxo-caixa': 'Financeiro',
+    'cashback': 'Cashback',
     
-    // Submenu items - Marketing
+    // Gestão modules
+    'profissionais': 'Profissionais',
+    'profissionais-lista': 'Profissionais',
+    'materiais': 'Materiais',
+    'uniformes': 'Uniformes',
+    
+    // Marketing modules
     'marketing': 'Marketing',
     'materiais-marketing': 'Marketing',
     'publicacoes': 'Publicações',
     
-    // Submenu items - Compras
-    'compras': 'Materiais',
-    'uniformes': 'Uniformes',
-    'materiais': 'Materiais',
-    
-    // Submenu items - Suporte
-    'suporte': 'Tickets',
-    'tickets': 'Tickets',
+    // Educação modules
+    'maria-uni': 'MariaUni',
     'base-conhecimento': 'Base Conhecimento',
     
-    // Legacy mappings (manter por compatibilidade)
-    'usuarios': 'Usuários',
+    // RH modules
+    'recrutadora': 'Recrutadora',
     
-    // Super Admin items - sempre permitidos para super admin
+    // Super Admin modules
     'super-admin': 'super-admin',
+    'super-admin-dashboard': 'super-admin',
     'gestao-unidades': 'super-admin',
-    'configuracao-modulos': 'super-admin'
+    'configuracao-modulos': 'super-admin',
+    
+    // Admin modules - Configuration
+    'configuracao': 'configuracao-admin',
+    'gestao-usuarios': 'configuracao-admin',
   };
 
-  return moduleMap[menuId] || menuId;
+  return idToModuleMap[id] || id;
 };

@@ -28,6 +28,7 @@ import TicketsModule from "@/components/TicketsModule";
 import BaseConhecimentoModule from "@/components/BaseConhecimentoModule";
 import MariaUniModule from "@/components/MariaUniModule";
 import GestaoUnidadesModule from "@/components/GestaoUnidadesModule";
+import { GestaoUsuariosModule } from "@/components/GestaoUsuariosModule";
 import ConfiguracaoModulosModule from "@/components/ConfiguracaoModulosModule";
 
 const Index = () => {
@@ -39,6 +40,8 @@ const Index = () => {
         return "Gestão de Unidades";
       case "configuracao-modulos":
         return "Configuração de Módulos";
+      case "gestao-usuarios":
+        return "Gestão de Usuários";
       case "gestao":
         return "Dashboard de Gestão";
       case "agendamentos":
@@ -96,6 +99,8 @@ const Index = () => {
         return <GestaoUnidadesModule />;
       case "configuracao-modulos":
         return <ConfiguracaoModulosModule />;
+      case "gestao-usuarios":
+        return <GestaoUsuariosModule />;
       case "gestao":
         return <ModernDashboard />;
       case "agendamentos":

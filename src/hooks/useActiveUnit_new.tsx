@@ -121,13 +121,13 @@ export function ActiveUnitProvider({ children }: { children: ReactNode }) {
     });
 
     try {
-      // SOMENTE Super Admin: acesso total a todos os módulos ativos da unidade
-      if (user.is_super_admin) {
-        console.log('👑 Super Admin: carregando todos os módulos da unidade');
+      // Super Admin e Admin (level >= 80): acesso a todos os módulos ativos da unidade
+      if (user.is_super_admin || user?.role_level >= 80) {
+        console.log('👑 Admin/Super Admin: carregando todos os módulos da unidade');
         await loadUnitModules();
       } else {
-        // Admin e Atendente: acesso apenas aos módulos ativos + com permissão específica
-        console.log('👤 Admin/Atendente: carregando módulos com permissão específica');
+        // Atendente (level < 80): acesso apenas aos módulos com permissão específica
+        console.log('👤 Atendente: carregando módulos com permissão específica');
         await loadAtendantModules();
       }
     } catch (error) {
@@ -188,77 +188,54 @@ export function ActiveUnitProvider({ children }: { children: ReactNode }) {
 
   // Função para carregar módulos específicos do atendente
   const loadAtendantModules = async () => {
-    console.log('🔍 LoadAtendantModules iniciado para:', user.email, 'unidade:', activeUnit.id);
-    
-    // 1. Buscar módulos ATIVOS na unidade
-    const { data: unitModules, error: unitError } = await supabase
-      .from('unit_modules')
-      .select(`
-        module_id,
-        is_active,
-        modules:module_id (
-          id,
-          name,
-          display_name,
-          category,
-          is_core
-        )
-      `)
-      .eq('unit_id', activeUnit.id)
-      .eq('is_active', true);
-
-    if (unitError) throw unitError;
-    console.log('� Módulos ativos na unidade:', unitModules?.length || 0);
-
-    if (!unitModules || unitModules.length === 0) {
-      console.log('⚠️ Nenhum módulo ativo na unidade');
-      setAvailableModules([]);
-      return;
-    }
-
-    // 2. Buscar permissões específicas do usuário para esses módulos
-    const activeModuleIds = unitModules.map(um => um.module_id);
+    // 1. Buscar permissões específicas do usuário
     const { data: userPermissions, error: permError } = await supabase
       .from('user_module_permissions')
       .select('*')
       .eq('user_id', user.id)
       .eq('unit_id', activeUnit.id)
       .eq('is_active', true)
-      .eq('can_view', true)
-      .in('module_id', activeModuleIds);
+      .eq('can_view', true);
 
     if (permError) throw permError;
-    console.log('🔐 Permissões específicas encontradas:', userPermissions?.length || 0);
 
-    // 3. Combinar: módulos ativos na unidade + com permissão do usuário
-    const allowedModules = unitModules
-      .filter(um => {
-        // Verificar se o usuário tem permissão para este módulo
-        const hasPermission = userPermissions?.some(up => 
-          up.module_id === um.module_id && up.can_view === true
-        );
-        
-        // Módulos core são sempre liberados se estão ativos na unidade
-        const isCoreModule = um.modules?.is_core === true;
-        
-        const isAllowed = hasPermission || isCoreModule;
-        
-        console.log(`  - ${um.modules?.display_name}: ativo=${um.is_active}, permissão=${hasPermission}, core=${isCoreModule}, liberado=${isAllowed}`);
-        
-        return isAllowed;
-      })
-      .map(um => ({
-        module_id: um.modules.id,
-        module_name: um.modules.name,
-        module_display_name: um.modules.display_name,
-        category: um.modules.category,
-        is_core: um.modules.is_core
-      }));
+    console.log('🔍 Permissões específicas encontradas:', userPermissions?.length || 0);
 
-    console.log('✅ Módulos finais liberados para atendente:', allowedModules.length);
-    allowedModules.forEach(m => console.log(`   - ${m.module_display_name} (${m.category})`));
-    
-    setAvailableModules(allowedModules);
+    if (!userPermissions || userPermissions.length === 0) {
+      console.log('⚠️ Nenhuma permissão específica encontrada');
+      setAvailableModules([]);
+      return;
+    }
+
+    // 2. Buscar informações dos módulos permitidos
+    const moduleIds = userPermissions.map(up => up.module_id).filter(Boolean);
+    const { data: modulesData, error: modulesError } = await supabase
+      .from('modules')
+      .select('id, name, display_name, category, is_core')
+      .in('id', moduleIds);
+
+    if (modulesError) throw modulesError;
+
+    // 3. Combinar os dados
+    const modules = userPermissions.map(up => {
+      const moduleInfo = modulesData?.find(m => m.id === up.module_id);
+      
+      if (!moduleInfo) {
+        console.warn('⚠️ Módulo não encontrado:', up.module_id);
+        return null;
+      }
+      
+      return {
+        module_id: moduleInfo.id,
+        module_name: moduleInfo.name,
+        module_display_name: moduleInfo.display_name,
+        category: moduleInfo.category,
+        is_core: moduleInfo.is_core
+      };
+    }).filter(Boolean) || [];
+
+    console.log('✅ Módulos do atendente carregados:', modules.length, modules.map(m => m.module_name));
+    setAvailableModules(modules);
   };
 
   // Função para trocar de unidade ativa

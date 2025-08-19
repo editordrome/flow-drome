@@ -22,10 +22,12 @@ import {
   UserPlus,
   UserCheck,
   User,
-  Activity,
+  Key,
   ToggleLeft,
   ToggleRight,
-  CheckCircle
+  CheckCircle,
+  Save,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useActiveUnit } from '@/hooks/useActiveUnit';
@@ -179,8 +181,10 @@ interface UnitModule {
 export default function GestaoUnidadesModule() {
   const { user } = useAuth();
   const { activeUnit } = useActiveUnit();
+  const { toast } = useToast();
   const [units, setUnits] = useState<Unit[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
+  const [users, setUsers] = useState<DatabaseUser[]>([]);
   const [unitModules, setUnitModules] = useState<UnitModule[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -199,7 +203,17 @@ export default function GestaoUnidadesModule() {
   const [unitUsers, setUnitUsers] = useState<UserUnitAssignment[]>([]);
   const [availableUsers, setAvailableUsers] = useState<DatabaseUser[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dados' | 'modulos' | 'usuarios' | 'logs'>('dados');
+  const [activeTab, setActiveTab] = useState<'dados' | 'modulos' | 'usuarios' | 'keys'>('dados');
+  const [unitKeys, setUnitKeys] = useState<any[]>([]);
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [editingKey, setEditingKey] = useState<any>(null);
+  const [newKeyData, setNewKeyData] = useState({
+    name: '',
+    description: '',
+    key_type: 'api_key',
+    value: '',
+    is_active: true
+  });
   const [unitLogs, setUnitLogs] = useState<any[]>([]);
   const [creatingUser, setCreatingUser] = useState(false);
   const [newUserData, setNewUserData] = useState({
@@ -467,7 +481,7 @@ export default function GestaoUnidadesModule() {
       }
 
       console.log('✅ Roles carregados:', rolesData?.length || 0);
-      setRoles(rolesData || []);
+      setAvailableRoles(rolesData || []);
 
       console.log('🎉 Todos os dados carregados com sucesso!');
       
@@ -487,6 +501,7 @@ export default function GestaoUnidadesModule() {
   const loadUserDetails = async (userId: string) => {
     try {
       setLoadingUserDetails(true);
+      console.log('🔄 LoadUserDetails iniciado para userId:', userId, 'selectedUnitDetails:', selectedUnitDetails?.id);
       
       // Buscar dados completos do usuário
       const { data: userData, error: userError } = await supabase
@@ -504,6 +519,7 @@ export default function GestaoUnidadesModule() {
         .single();
 
       if (userError) throw userError;
+      console.log('✅ Dados do usuário carregados:', userData);
 
       // Buscar todas as unidades que o usuário está vinculado
       const { data: userUnitsData, error: unitsError } = await supabase
@@ -519,10 +535,12 @@ export default function GestaoUnidadesModule() {
         .eq('user_id', userId);
 
       if (unitsError) throw unitsError;
+      console.log('✅ Unidades do usuário carregadas:', userUnitsData?.length || 0);
 
       // Se o usuário for atendente, buscar suas permissões de módulos para a unidade atual
       let modulePermissions = [];
       if (userData.roles?.level <= 30 && selectedUnitDetails?.id) {
+        console.log('🔍 Buscando permissões de módulos para atendente...');
         const { data: permissionsData, error: permissionsError } = await supabase
           .from('user_module_permissions')
           .select(`
@@ -539,15 +557,23 @@ export default function GestaoUnidadesModule() {
 
         if (!permissionsError) {
           modulePermissions = permissionsData || [];
+          console.log('✅ Permissões encontradas:', modulePermissions.length);
+        } else {
+          console.error('❌ Erro ao buscar permissões:', permissionsError);
         }
       }
+
+      console.log('📊 Estado atual do componente:');
+      console.log('   - unitModules.length:', unitModules.length);
+      console.log('   - modules.length:', modules.length);
+      console.log('   - userModulePermissions.length:', modulePermissions.length);
 
       setSelectedUserDetails(userData);
       setUserUnits(userUnitsData || []);
       setUserModulePermissions(modulePermissions);
       
     } catch (error) {
-      console.error('Erro ao carregar detalhes do usuário:', error);
+      console.error('❌ Erro ao carregar detalhes do usuário:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os detalhes do usuário",
@@ -770,24 +796,19 @@ export default function GestaoUnidadesModule() {
         availableUsers: availableUsersFiltered.length
       });
 
-      // Carregar logs da unidade (simulação - você pode implementar uma tabela de logs)
-      const unitLogsSimulation = [
-        {
-          id: '1',
-          action: 'Unidade criada',
-          user: user.name,
-          timestamp: unitData.created_at,
-          details: 'Unidade foi criada no sistema'
-        },
-        {
-          id: '2', 
-          action: 'Dados atualizados',
-          user: user.name,
-          timestamp: unitData.updated_at || unitData.created_at,
-          details: 'Informações da unidade foram modificadas'
-        }
-      ];
-      setUnitLogs(unitLogsSimulation);
+      // Carregar keys da unidade
+      const { data: unitKeysData, error: keysError } = await supabase
+        .from('unit_keys')
+        .select('*')
+        .eq('unit_id', unitId)
+        .order('created_at', { ascending: false });
+
+      if (keysError) {
+        console.error('Erro ao carregar keys da unidade:', keysError);
+        setUnitKeys([]);
+      } else {
+        setUnitKeys(unitKeysData || []);
+      }
 
     } catch (error) {
       console.error('Erro ao carregar detalhes da unidade:', error);
@@ -803,7 +824,7 @@ export default function GestaoUnidadesModule() {
     setActiveTab('dados'); // Reset para primeira aba
     setUnitUsers([]);
     setAvailableUsers([]);
-    setUnitLogs([]);
+    setUnitKeys([]);
     
     // Carregar dados em background
     await loadUnitDetails(unit.id);
@@ -816,7 +837,7 @@ export default function GestaoUnidadesModule() {
     setActiveTab('modulos'); // Abrir direto na aba módulos
     setUnitUsers([]);
     setAvailableUsers([]);
-    setUnitLogs([]);
+    setUnitKeys([]);
     
     // Carregar dados em background
     await loadUnitDetails(unit.id);
@@ -889,6 +910,179 @@ export default function GestaoUnidadesModule() {
       setCreatingUser(false);
     }
   };
+
+  // ==================== FUNÇÕES DE GERENCIAMENTO DE KEYS ====================
+  
+  // Criar nova key
+  const createKey = async () => {
+    if (!selectedUnitDetails) return;
+    
+    try {
+      setCreatingKey(true);
+      
+      const { data, error } = await supabase
+        .from('unit_keys')
+        .insert({
+          unit_id: selectedUnitDetails.id,
+          name: newKeyData.name.trim(),
+          description: newKeyData.description.trim(),
+          key_type: newKeyData.key_type,
+          value: newKeyData.value.trim(),
+          is_active: newKeyData.is_active,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Atualizar lista local
+      setUnitKeys(prev => [data, ...prev]);
+      
+      // Resetar formulário
+      setNewKeyData({
+        name: '',
+        description: '',
+        key_type: 'api_key',
+        value: '',
+        is_active: true
+      });
+
+      toast({
+        title: "Key criada com sucesso",
+        description: `A key "${data.name}" foi criada para a unidade.`,
+        duration: 3000
+      });
+      
+    } catch (error) {
+      console.error('Erro ao criar key:', error);
+      toast({
+        title: "Erro ao criar key",
+        description: "Não foi possível criar a key. Tente novamente.",
+        variant: "destructive",
+        duration: 3000
+      });
+    } finally {
+      setCreatingKey(false);
+    }
+  };
+
+  // Editar key existente
+  const updateKey = async () => {
+    if (!editingKey) return;
+    
+    try {
+      const { error } = await supabase
+        .from('unit_keys')
+        .update({
+          name: editingKey.name.trim(),
+          description: editingKey.description.trim(),
+          key_type: editingKey.key_type,
+          value: editingKey.value.trim(),
+          is_active: editingKey.is_active,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingKey.id);
+
+      if (error) throw error;
+
+      // Atualizar lista local
+      setUnitKeys(prev => 
+        prev.map(key => 
+          key.id === editingKey.id ? { ...key, ...editingKey } : key
+        )
+      );
+
+      setEditingKey(null);
+
+      toast({
+        title: "Key atualizada com sucesso",
+        description: `A key "${editingKey.name}" foi atualizada.`,
+        duration: 3000
+      });
+      
+    } catch (error) {
+      console.error('Erro ao atualizar key:', error);
+      toast({
+        title: "Erro ao atualizar key",
+        description: "Não foi possível atualizar a key. Tente novamente.",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
+  };
+
+  // Deletar key
+  const deleteKey = async (keyId: string, keyName: string) => {
+    if (!confirm(`Tem certeza que deseja deletar a key "${keyName}"?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('unit_keys')
+        .delete()
+        .eq('id', keyId);
+
+      if (error) throw error;
+
+      // Remover da lista local
+      setUnitKeys(prev => prev.filter(key => key.id !== keyId));
+
+      toast({
+        title: "Key deletada com sucesso",
+        description: `A key "${keyName}" foi removida.`,
+        duration: 3000
+      });
+      
+    } catch (error) {
+      console.error('Erro ao deletar key:', error);
+      toast({
+        title: "Erro ao deletar key",
+        description: "Não foi possível deletar a key. Tente novamente.",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
+  };
+
+  // Toggle status da key
+  const toggleKeyStatus = async (keyId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('unit_keys')
+        .update({
+          is_active: !currentStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', keyId);
+
+      if (error) throw error;
+
+      // Atualizar lista local
+      setUnitKeys(prev => 
+        prev.map(key => 
+          key.id === keyId ? { ...key, is_active: !currentStatus } : key
+        )
+      );
+
+      toast({
+        title: `Key ${!currentStatus ? 'ativada' : 'desativada'}`,
+        description: "Status da key atualizado com sucesso.",
+        duration: 2000
+      });
+      
+    } catch (error) {
+      console.error('Erro ao alterar status da key:', error);
+      toast({
+        title: "Erro ao alterar status",
+        description: "Não foi possível alterar o status da key.",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
+  };
+
+  // ==================== FIM DAS FUNÇÕES DE KEYS ====================
 
   // Salvar alterações da unidade
   const saveUnitChanges = async () => {
@@ -1026,16 +1220,16 @@ export default function GestaoUnidadesModule() {
           title: 'Gestão de Usuários',
           description: 'Gerencie usuários vinculados à esta unidade'
         };
-      case 'logs':
+      case 'keys':
         return {
           gradient: 'from-purple-50 to-pink-50',
           borderColor: 'border-purple-100',
           iconBg: 'bg-purple-200 text-purple-700',
           titleColor: 'text-purple-900',
           descriptionColor: 'text-purple-700',
-          icon: Activity,
-          title: 'Logs de Atividade',
-          description: 'Histórico completo de ações realizadas na unidade'
+          icon: Key,
+          title: 'Chaves e Integrações',
+          description: 'Gerenciar APIs, endereços e códigos de integração da unidade'
         };
       default:
         return {
@@ -1167,7 +1361,8 @@ export default function GestaoUnidadesModule() {
           .update({ 
             is_active: newStatus,
             enabled_by: user.id,
-            enabled_at: newStatus ? new Date().toISOString() : null
+            enabled_at: newStatus ? new Date().toISOString() : null,
+            disabled_at: !newStatus ? new Date().toISOString() : null
           })
           .eq('id', existingRelation.id);
 
@@ -1821,16 +2016,16 @@ export default function GestaoUnidadesModule() {
                   </div>
                 </button>
                 <button
-                  onClick={() => setActiveTab('logs')}
+                  onClick={() => setActiveTab('keys')}
                   className={`px-6 py-4 text-sm font-medium transition-all duration-200 relative whitespace-nowrap ${
-                    activeTab === 'logs' 
+                    activeTab === 'keys' 
                       ? 'text-blue-600 bg-white border-b-2 border-blue-600 rounded-t-lg shadow-lg' 
                       : 'text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-t-lg'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    Logs de Atividade
+                    <Key className="h-4 w-4" />
+                    Chaves & Integrações ({unitKeys.length})
                   </div>
                 </button>
               </div>
@@ -2288,13 +2483,10 @@ export default function GestaoUnidadesModule() {
                                     </span>
                                     <button
                                       onClick={() => toggleModuleStatus(selectedUnitDetails?.id, module.id, !isActive)}
-                                      disabled={module.is_core}
-                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
                                         isActive
                                           ? 'bg-green-600'
                                           : 'bg-gray-300'
-                                      } ${
-                                        module.is_core ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                       }`}
                                     >
                                       <span
@@ -2386,37 +2578,315 @@ export default function GestaoUnidadesModule() {
                   </div>
                 )}
 
-                {activeTab === 'logs' && (
-                  <div className="space-y-6">                    
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {unitLogs.length === 0 ? (
-                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                          <Activity className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                          <p className="text-gray-500 font-medium">Nenhuma atividade registrada</p>
-                          <p className="text-sm text-gray-400 mt-1">Os logs de atividade aparecerão aqui quando houver movimentação</p>
-                        </div>
-                      ) : (
-                        unitLogs.map((log) => (
-                          <div key={log.id} className="flex items-start gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-200">
-                            <div className="flex-shrink-0">
-                              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                <Activity className="h-5 w-5 text-purple-600" />
-                              </div>
+                {activeTab === 'keys' && (
+                  <div className="space-y-6">
+                    {/* Header com botão de criar nova key */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Chaves e Integrações</h3>
+                        <p className="text-sm text-gray-600">Gerencie APIs, endereços e códigos de integração desta unidade</p>
+                      </div>
+                      <Button
+                        onClick={() => setCreatingKey(true)}
+                        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700"
+                        disabled={!user.is_super_admin}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Nova Key
+                      </Button>
+                    </div>
+
+                    {/* Formulário de criação de nova key */}
+                    {creatingKey && (
+                      <Card className="border-purple-200 bg-purple-50">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Key className="h-5 w-5 text-purple-600" />
+                            Criar Nova Key
+                          </CardTitle>
+                          <CardDescription>
+                            Adicione uma nova chave de integração para esta unidade
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="key-name">Nome da Key *</Label>
+                              <Input
+                                id="key-name"
+                                placeholder="Ex: API WhatsApp, Endereço Principal"
+                                value={newKeyData.name}
+                                onChange={(e) => setNewKeyData(prev => ({ ...prev, name: e.target.value }))}
+                              />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="font-semibold text-gray-900">{log.action}</p>
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                  {new Date(log.timestamp).toLocaleString('pt-BR')}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{log.details}</p>
-                              <div className="flex items-center gap-2">
-                                <User className="h-3 w-3 text-gray-400" />
-                                <span className="text-xs text-gray-500">{log.user}</span>
-                              </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="key-type">Tipo *</Label>
+                              <select
+                                id="key-type"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                value={newKeyData.key_type}
+                                onChange={(e) => setNewKeyData(prev => ({ ...prev, key_type: e.target.value }))}
+                              >
+                                <option value="api_key">API Key</option>
+                                <option value="access_token">Access Token</option>
+                                <option value="webhook_url">Webhook URL</option>
+                                <option value="endpoint">Endpoint</option>
+                                <option value="address">Endereço</option>
+                                <option value="code">Código</option>
+                                <option value="other">Outro</option>
+                              </select>
                             </div>
                           </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="key-description">Descrição</Label>
+                            <Textarea
+                              id="key-description"
+                              placeholder="Descreva o propósito desta key..."
+                              rows={2}
+                              value={newKeyData.description}
+                              onChange={(e) => setNewKeyData(prev => ({ ...prev, description: e.target.value }))}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="key-value">Valor/Conteúdo *</Label>
+                            <Textarea
+                              id="key-value"
+                              placeholder="Cole aqui a key, token, URL, endereço ou código..."
+                              rows={3}
+                              value={newKeyData.value}
+                              onChange={(e) => setNewKeyData(prev => ({ ...prev, value: e.target.value }))}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id="key-active"
+                                checked={newKeyData.is_active}
+                                onChange={(e) => setNewKeyData(prev => ({ ...prev, is_active: e.target.checked }))}
+                                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                              />
+                              <Label htmlFor="key-active">Key ativa</Label>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setCreatingKey(false);
+                                  setNewKeyData({
+                                    name: '',
+                                    description: '',
+                                    key_type: 'api_key',
+                                    value: '',
+                                    is_active: true
+                                  });
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                onClick={createKey}
+                                disabled={!newKeyData.name.trim() || !newKeyData.value.trim()}
+                                className="bg-purple-600 hover:bg-purple-700"
+                              >
+                                <Save className="h-4 w-4 mr-2" />
+                                Salvar
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Lista de keys existentes */}
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {unitKeys.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                          <Key className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-gray-500 font-medium">Nenhuma key cadastrada</p>
+                          <p className="text-sm text-gray-400 mt-1">
+                            {user.is_super_admin 
+                              ? 'Clique em "Nova Key" para adicionar sua primeira integração'
+                              : 'Apenas Super Admins podem gerenciar keys'
+                            }
+                          </p>
+                        </div>
+                      ) : (
+                        unitKeys.map((key) => (
+                          <Card key={key.id} className={`border transition-all duration-200 hover:shadow-md ${
+                            key.is_active ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
+                          }`}>
+                            <CardContent className="p-4">
+                              {editingKey?.id === key.id ? (
+                                // Modo de edição
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label>Nome da Key</Label>
+                                      <Input
+                                        value={editingKey.name}
+                                        onChange={(e) => setEditingKey(prev => ({ ...prev, name: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Tipo</Label>
+                                      <select
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        value={editingKey.key_type}
+                                        onChange={(e) => setEditingKey(prev => ({ ...prev, key_type: e.target.value }))}
+                                      >
+                                        <option value="api_key">API Key</option>
+                                        <option value="access_token">Access Token</option>
+                                        <option value="webhook_url">Webhook URL</option>
+                                        <option value="endpoint">Endpoint</option>
+                                        <option value="address">Endereço</option>
+                                        <option value="code">Código</option>
+                                        <option value="other">Outro</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Descrição</Label>
+                                    <Textarea
+                                      rows={2}
+                                      value={editingKey.description}
+                                      onChange={(e) => setEditingKey(prev => ({ ...prev, description: e.target.value }))}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Valor/Conteúdo</Label>
+                                    <Textarea
+                                      rows={3}
+                                      value={editingKey.value}
+                                      onChange={(e) => setEditingKey(prev => ({ ...prev, value: e.target.value }))}
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={editingKey.is_active}
+                                        onChange={(e) => setEditingKey(prev => ({ ...prev, is_active: e.target.checked }))}
+                                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                                      />
+                                      <Label>Key ativa</Label>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setEditingKey(null)}
+                                      >
+                                        Cancelar
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={updateKey}
+                                        className="bg-purple-600 hover:bg-purple-700"
+                                      >
+                                        <Save className="h-4 w-4 mr-2" />
+                                        Salvar
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                // Modo de visualização
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                        key.is_active ? 'bg-green-200 text-green-700' : 'bg-gray-200 text-gray-500'
+                                      }`}>
+                                        <Key className="h-4 w-4" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium text-gray-900">{key.name}</h4>
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant="outline" className="text-xs">
+                                            {key.key_type.replace('_', ' ').toUpperCase()}
+                                          </Badge>
+                                          <Badge variant={key.is_active ? 'default' : 'secondary'} className="text-xs">
+                                            {key.is_active ? 'Ativa' : 'Inativa'}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {user.is_super_admin && (
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => toggleKeyStatus(key.id, key.is_active)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          {key.is_active ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-gray-400" />}
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => setEditingKey(key)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => deleteKey(key.id, key.name)}
+                                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {key.description && (
+                                    <p className="text-sm text-gray-600 bg-gray-100 p-2 rounded">
+                                      {key.description}
+                                    </p>
+                                  )}
+                                  
+                                  <div className="bg-gray-100 p-3 rounded border font-mono text-sm">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs text-gray-500 font-sans">VALOR:</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(key.value);
+                                          toast({
+                                            title: "Copiado!",
+                                            description: "Valor copiado para a área de transferência.",
+                                            duration: 2000
+                                          });
+                                        }}
+                                        className="h-6 px-2 text-xs"
+                                      >
+                                        Copiar
+                                      </Button>
+                                    </div>
+                                    <div className="text-gray-700 break-all">
+                                      {key.value.length > 100 ? `${key.value.substring(0, 100)}...` : key.value}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between text-xs text-gray-500">
+                                    <span>Criado em: {new Date(key.created_at).toLocaleString('pt-BR')}</span>
+                                    {key.updated_at && key.updated_at !== key.created_at && (
+                                      <span>Atualizado em: {new Date(key.updated_at).toLocaleString('pt-BR')}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
                         ))
                       )}
                     </div>
@@ -2734,10 +3204,28 @@ export default function GestaoUnidadesModule() {
                   
                   {/* Obter módulos disponíveis para a unidade atual */}
                   {(() => {
+                    console.log('🔍 Modal Debug - Processando módulos:');
+                    console.log('   - selectedUnitDetails:', selectedUnitDetails);
+                    console.log('   - unitModules.length:', unitModules.length);
+                    console.log('   - modules.length:', modules.length);
+                    console.log('   - userModulePermissions.length:', userModulePermissions.length);
+                    
                     const availableModules = unitModules
-                      .filter(um => um.unit_id === selectedUnitDetails?.id && um.is_active)
-                      .map(um => modules.find(m => m.id === um.module_id))
+                      .filter(um => {
+                        const isRightUnit = um.unit_id === selectedUnitDetails?.id;
+                        const isActive = um.is_active;
+                        console.log(`   - Unit Module ${um.module_id}: unit=${isRightUnit}, active=${isActive}`);
+                        return isRightUnit && isActive;
+                      })
+                      .map(um => {
+                        const module = modules.find(m => m.id === um.module_id);
+                        console.log(`   - Found module for ${um.module_id}:`, module?.display_name || 'NOT FOUND');
+                        return module;
+                      })
                       .filter(Boolean);
+                    
+                    console.log('✅ Modal Debug - Módulos disponíveis finais:', availableModules.length);
+                    availableModules.forEach(m => console.log(`   - ${m.display_name} (${m.category})`));
                     
                     const groupedModules = availableModules.reduce((acc, module) => {
                       const category = module.category;
@@ -2753,7 +3241,20 @@ export default function GestaoUnidadesModule() {
                             <h5 className="font-medium text-gray-700 mb-2 capitalize">{category}</h5>
                             <div className="space-y-2">
                               {categoryModules.map((module) => {
-                                const hasPermission = userModulePermissions.some(p => p.module_id === module.id);
+                                console.log(`🔍 Modal Permission Check - ${module.display_name}:`);
+                                console.log(`   - module.id: ${module.id}`);
+                                console.log(`   - selectedUserDetails.id: ${selectedUserDetails?.id}`);
+                                console.log(`   - userModulePermissions.length: ${userModulePermissions.length}`);
+                                
+                                const hasPermission = userModulePermissions.some(p => {
+                                  const matches = p.module_id === module.id && p.user_id === selectedUserDetails?.id;
+                                  console.log(`   - Checking permission: module=${p.module_id}, user=${p.user_id}, matches=${matches}`);
+                                  return matches;
+                                });
+                                
+                                console.log(`   - Final hasPermission: ${hasPermission}`);
+                                console.log(`   - module.is_core: ${module.is_core}`);
+                                
                                 return (
                                   <div key={module.id} className="flex items-center justify-between py-2">
                                     <div className="flex items-center gap-2">
@@ -2769,18 +3270,15 @@ export default function GestaoUnidadesModule() {
                                     </div>
                                     <button
                                       onClick={() => toggleUserModulePermission(selectedUserDetails.id, module.id, hasPermission)}
-                                      disabled={module.is_core} // Módulos essenciais sempre liberados
-                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                                        hasPermission || module.is_core
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
+                                        hasPermission
                                           ? 'bg-green-600'
                                           : 'bg-gray-300'
-                                      } ${
-                                        module.is_core ? 'opacity-75' : 'cursor-pointer'
                                       }`}
                                     >
                                       <span
                                         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                                          hasPermission || module.is_core ? 'translate-x-6' : 'translate-x-1'
+                                          hasPermission ? 'translate-x-6' : 'translate-x-1'
                                         }`}
                                       />
                                     </button>

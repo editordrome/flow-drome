@@ -98,6 +98,18 @@ export const menuItems: MenuItem[] = [
     icon: Users,
   },
   {
+    id: "configuracao",
+    label: "Configuração",
+    icon: Settings,
+    submenu: [
+      {
+        id: "gestao-usuarios",
+        label: "Usuários",
+        icon: Users,
+      }
+    ]
+  },
+  {
     id: "profissionais",
     label: "Profissionais",
     icon: UserCheck,

@@ -1,29 +1,32 @@
 # MariaFlow - Sistema de Gestão de Franquias
 
-# DromeFlow - Sistema de Gestão de Franquias
+> 🎯 **Sistema completo de gestão para franquias** permitindo controle centralizado de múltiplas unidades com governança empresarial e modularidade flexível.
 
-> 🎯 **Sistema completo de gestão para franquias** com controle hierárquico de permissões, módulos configuráveis por unidade e interface moderna.
+**Status**: ✅ **Sistema 100% Operacional** - Última atualização: 22/08/2025
 
-**Status**: ✅ **Sistema 100% Operacional** - Última atualização: 21/08/2025
+## 🚀 Funcionalidades Principais
 
-## ⚠️ **Status Importante - Context7**
+### ✅ Sistema de Autenticação Completo (Implementado Agosto 2025)
+- **Login/Logout Funcional**: Sistema customizado via PostgreSQL com fallback duplo
+- **Proteção de Rotas**: Redirecionamento automático para usuários não autenticados
+- **Sessão Persistente**: Mantém usuário logado via localStorage
+- **Menu de Usuário**: Dropdown no header com informações e logout
+- **Função PostgreSQL**: `authenticate_user(email, password)` com hash seguro
 
-### **Context7 Temporariamente Desabilitado**
-O assistente IA Context7 está **temporariamente desabilitado** devido a problemas de build identificados em 20/08/2025:
+### ✅ Sistema de Permissões Hierárquicas
+- **🔴 Super Admin (level 100)**: Acesso total + módulos especiais (Super Admin Dashboard, Gestão Unidades)
+- **🟡 Administrador (level 80)**: Acesso aos módulos habilitados na unidade (table: unit_modules)  
+- **🟢 Atendente (level 30)**: Acesso granular aos módulos específicos liberados (table: user_module_permissions)
 
-```bash
-# Status Atual
-❌ Context7: DESABILITADO (VITE_CONTEXT7_ENABLED=false)
-✅ Sistema Base: 100% funcional
-✅ Build: Compila sem erros
-✅ Performance: Excelente
-```
+### ✅ Sistema de Gestão de Unidades (Completo)
+- **Cadastro e Edição**: Interface completa para gerenciar unidades/filiais
+- **Vinculação de Usuários**: Sistema hierárquico de associação usuário-unidade
+- **Gestão de Módulos**: Controle por unidade de quais módulos estão ativos
+- **Interface de Chaves**: Gestão de APIs e integrações por unidade (Agosto 2025)
+- **Criação de Usuários**: Super Admin pode criar e vincular usuários diretamente
+- **Logs de Atividade**: Auditoria completa de ações no sistema
 
-**Problemas Identificados:**
-- SyntaxError em exports/imports
-- Funções não implementadas
-- Dependências circulares
-- Provider não funcional
+### ✅ Módulos Implementados (17 módulos ativos)
 
 ## 📊 **Estado Atual do Sistema**
 
@@ -36,21 +39,20 @@ O assistente IA Context7 está **temporariamente desabilitado** devido a problem
 
 ### 🔐 **Usuários Configurados**
 - **Super Admin**: jeanpetri@gmail.com 
-- **Admin**: admin@dromeflow.com 
+- **Admin**: admin@mariaflow.com 
 - **3 usuários** adicionais em diferentes unidades
 
 ### 🏢 **Unidades Ativas**
-- **DromeFlow Matriz** (CNPJ: 12.345.678/0001-90)
-- **DromeFlow Filial Norte** (CNPJ: 12.345.678/0002-71)
+- **MariaFlow Matriz** (CNPJ: 12.345.678/0001-90)
+- **MariaFlow Filial Norte** (CNPJ: 12.345.678/0002-71)
 - **MB Drome** - Unidade operacional
 - **MB Londrina** - Unidade operacional
 
-**DromeFlow** - Sistema de Gestão de Franquias © 2025  
+**MariaFlow** - Sistema de Gestão de Franquias © 2025  
 🚀 **Desenvolvido com React 18, TypeScript, Vite, Tailwind CSS e Supabase**
 
 **Status**: ✅ **Sistema 100% Operacional** - Pronto para produção  
-⚠️ **Context7**: Temporariamente desabilitado (problemas de build)  
-**Última Atualização**: 21 de Agosto de 2025
+**Última Atualização**: 22 de Agosto de 2025
 
 **Status**: ✅ **Sistema 100% Operacional** - Última atualização: 19/08/2025
 

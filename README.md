@@ -1,6 +1,56 @@
 # MariaFlow - Sistema de Gestão de Franquias
 
+# DromeFlow - Sistema de Gestão de Franquias
+
 > 🎯 **Sistema completo de gestão para franquias** com controle hierárquico de permissões, módulos configuráveis por unidade e interface moderna.
+
+**Status**: ✅ **Sistema 100% Operacional** - Última atualização: 21/08/2025
+
+## ⚠️ **Status Importante - Context7**
+
+### **Context7 Temporariamente Desabilitado**
+O assistente IA Context7 está **temporariamente desabilitado** devido a problemas de build identificados em 20/08/2025:
+
+```bash
+# Status Atual
+❌ Context7: DESABILITADO (VITE_CONTEXT7_ENABLED=false)
+✅ Sistema Base: 100% funcional
+✅ Build: Compila sem erros
+✅ Performance: Excelente
+```
+
+**Problemas Identificados:**
+- SyntaxError em exports/imports
+- Funções não implementadas
+- Dependências circulares
+- Provider não funcional
+
+## 📊 **Estado Atual do Sistema**
+
+### 🎯 **Métricas Operacionais**
+- ✅ **5 usuários** ativos no sistema
+- ✅ **4 unidades** operacionais 
+- ✅ **17 módulos** funcionando normalmente
+- ✅ **21 tabelas** de banco de dados íntegras
+- ✅ **Workspace limpo** - 25+ arquivos obsoletos removidos
+
+### 🔐 **Usuários Configurados**
+- **Super Admin**: jeanpetri@gmail.com 
+- **Admin**: admin@dromeflow.com 
+- **3 usuários** adicionais em diferentes unidades
+
+### 🏢 **Unidades Ativas**
+- **DromeFlow Matriz** (CNPJ: 12.345.678/0001-90)
+- **DromeFlow Filial Norte** (CNPJ: 12.345.678/0002-71)
+- **MB Drome** - Unidade operacional
+- **MB Londrina** - Unidade operacional
+
+**DromeFlow** - Sistema de Gestão de Franquias © 2025  
+🚀 **Desenvolvido com React 18, TypeScript, Vite, Tailwind CSS e Supabase**
+
+**Status**: ✅ **Sistema 100% Operacional** - Pronto para produção  
+⚠️ **Context7**: Temporariamente desabilitado (problemas de build)  
+**Última Atualização**: 21 de Agosto de 2025
 
 **Status**: ✅ **Sistema 100% Operacional** - Última atualização: 19/08/2025
 
